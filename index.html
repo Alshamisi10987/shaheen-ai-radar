@@ -449,22 +449,22 @@
     <div class="modal-backdrop" id="settingsModalBackdrop"></div>
     <div class="dialog settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
       <div class="dialog-head">
-        <div class="avatar" style="width:62px;height:62px;border-radius:16px"><span>API</span></div>
+        <div class="avatar" style="width:62px;height:62px;border-radius:16px"><span>LIVE</span></div>
         <div>
           <div class="dialog-title" id="settingsTitle">Live News Settings</div>
-          <div class="dialog-meta">Connect a free API key and query to keep data live.</div>
+          <div class="dialog-meta">Free keyless feeds are enabled by default. API keys are optional boosters.</div>
         </div>
         <div class="head-actions"><button class="btn small ghost" id="closeSettingsModal">Close</button></div>
       </div>
       <div class="settings-body">
         <div class="settings-field">
-          <label for="gnewsKeyInput">GNews API key (free)</label>
+          <label for="gnewsKeyInput">GNews API key (optional)</label>
           <input id="gnewsKeyInput" type="password" placeholder="Paste your GNews key" autocomplete="off" />
         </div>
         <div class="settings-field">
           <label for="newsDataKeyInput">NewsData.io API key (optional)</label>
           <input id="newsDataKeyInput" type="password" placeholder="Paste your NewsData.io key" autocomplete="off" />
-          <div class="settings-hint">Adding a second key helps increase live news coverage.</div>
+          <div class="settings-hint">Leave both keys empty to run fully free via multi-source RSS + GDELT.</div>
         </div>
         <div class="settings-field">
           <label for="gnewsQueryInput">Query</label>
@@ -472,11 +472,15 @@
           <div class="settings-hint">Tip: keep UAE + AI keywords together for cleaner signals.</div>
         </div>
         <div class="settings-field">
+          <label><input id="optionalApisToggle" type="checkbox" /> Enable optional API-key sources (GNews/NewsData)</label>
+          <div class="settings-hint">Off by default for fully free mode.</div>
+        </div>
+        <div class="settings-field">
           <label><input id="archiveFallbackToggle" type="checkbox" /> Use archive fallback when live APIs are limited</label>
           <div class="settings-hint">Turn this off for real-only mode (recommended for strict live scoring).</div>
         </div>
         <div class="settings-actions">
-          <button class="btn ghost" id="clearGnewsBtn">Disable GNews</button>
+          <button class="btn ghost" id="clearGnewsBtn">Clear Optional Keys</button>
           <button class="btn" id="cancelSettingsBtn">Cancel</button>
           <button class="btn primary" id="saveSettingsBtn">Save settings</button>
         </div>
@@ -560,14 +564,18 @@
     }
 
     function isApiLimited() {
-      return Object.keys(API_STATE).some(k => isCoolingDown(k));
+      const enabledSources = useOptionalApis()
+        ? ['gnews', 'newsdata', 'gdelt', 'rss']
+        : ['gdelt', 'rss'];
+      return enabledSources.some(k => isCoolingDown(k));
     }
 
     function getDataStatusLabel() {
       if (lastSyncMode === 'ARCHIVE') return 'FALLBACK';
+      if (lastSyncMode === 'LIVE' && lastLiveSyncAt && LIVE_ARTICLES.length > 0) return 'LIVE';
       if (isApiLimited()) return 'LIMITED';
       if (lastSyncMode === 'LIVE+ARCHIVE') return 'LIMITED';
-      if (lastSyncMode === 'LIVE' && lastLiveSyncAt) return 'LIVE';
+      if (lastSyncMode === 'LIVE' && lastLiveSyncAt) return 'LIMITED';
       return 'LIMITED';
     }
 
@@ -653,10 +661,16 @@
         maxPerPull: 10,
         cooldownMs: 12 * 60 * 1000,
       },
+      optionalApisStorage: 'shaheen.optional.apis',
       archiveFallbackStorage: 'shaheen.archive.fallback',
       lookbackDays: 45,
       mergedCap: 300,
       refreshIntervalMs: 8 * 60 * 1000,
+      rss: {
+        maxPerFeed: 60,
+        feedCount: 6,
+        cooldownMs: 6 * 60 * 1000,
+      },
     };
 
     const API_STATE = {
@@ -700,6 +714,10 @@
       return getStoredValue(NEWS_CONFIG.archiveFallbackStorage) === '1';
     }
 
+    function useOptionalApis() {
+      return getStoredValue(NEWS_CONFIG.optionalApisStorage) === '1';
+    }
+
     function cleanQueryForApi(raw) {
       return String(raw || '')
         .replace(/[()]/g, ' ')
@@ -715,6 +733,23 @@
       const broadQuery = 'UAE Dubai Abu Dhabi AI artificial intelligence machine learning agentic government bank telecom energy healthcare education logistics';
       const targetQuery = 'ADNOC DEWA Emirates NBD Dubai Holding MBZUAI Digital Dubai AD Ports DP World Abu Dhabi Digital Authority';
       return [...new Set([userQuery, broadQuery, targetQuery].filter(Boolean))].slice(0, NEWS_CONFIG.gnews.queryCount);
+    }
+
+    function buildRssFeedUrls() {
+      const userQuery = cleanQueryForApi(getGNewsQuery()) || NEWS_CONFIG.gnews.defaultQuery;
+      const searchQueries = [
+        `${userQuery} UAE`,
+        `site:wam.ae UAE AI`,
+        `site:zawya.com UAE AI`,
+        `site:gulfnews.com UAE AI`,
+        `site:khaleejtimes.com UAE AI`,
+        `site:thenationalnews.com UAE AI`,
+        'UAE government AI partnership',
+        'Abu Dhabi Dubai AI deployment',
+      ];
+      return [...new Set(searchQueries)].slice(0, NEWS_CONFIG.rss.feedCount).map(q => (
+        `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-AE&gl=AE&ceid=AE:en`
+      ));
     }
 
     function articleText(title, description) {
@@ -1185,34 +1220,93 @@
       });
     }
 
-    async function fetchLiveSignalsFromRss() {
-      if (isCoolingDown('rss')) return [];
-      const rssUrl = 'https://news.google.com/rss/search?q=UAE+Dubai+Abu+Dhabi+AI+artificial+intelligence+machine+learning+agentic&hl=en-AE&gl=AE&ceid=AE:en';
-      const url = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=120`;
-      let data;
+    async function fetchRssAsJson(rssUrl) {
+      const url = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=${NEWS_CONFIG.rss.maxPerFeed}`;
+      const data = await fetchWithRetry(url, 'rss', {
+        maxAttempts: 2,
+        backoffMs: 900,
+        timeoutMs: 22000,
+        cooldownMs: NEWS_CONFIG.rss.cooldownMs,
+      });
+      return (data?.items || []).map(it => ({
+        title: it?.title || '',
+        description: it?.description || it?.content || '',
+        url: it?.link || '',
+        date: it?.pubDate || '',
+        source: hostFromUrl(it?.link || '') || it?.author || data?.feed?.title || 'Google News',
+        provider: 'google-rss-json',
+      }));
+    }
+
+    async function fetchRssAsXml(rssUrl) {
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`;
+      const res = await fetch(proxyUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const xml = await res.text();
+      const doc = new DOMParser().parseFromString(xml, 'text/xml');
+      const nodes = Array.from(doc.querySelectorAll('item, entry')).slice(0, NEWS_CONFIG.rss.maxPerFeed);
+      return nodes.map(node => {
+        const title = (node.querySelector('title')?.textContent || '').trim();
+        const description = (node.querySelector('description, summary, content')?.textContent || '').trim();
+        const linkNode = node.querySelector('link');
+        const linkAttr = linkNode?.getAttribute('href');
+        const linkText = (linkNode?.textContent || '').trim();
+        const url = (linkAttr || linkText || '').trim();
+        const date = (node.querySelector('pubDate, updated, published')?.textContent || '').trim();
+        return {
+          title,
+          description,
+          url,
+          date,
+          source: hostFromUrl(url) || 'Google News',
+          provider: 'google-rss-xml',
+        };
+      }).filter(x => x.title && x.url);
+    }
+
+    async function fetchSingleRssFeed(rssUrl) {
       try {
-        data = await fetchWithRetry(url, 'rss', { maxAttempts: 2, backoffMs: 1000, timeoutMs: 22000, cooldownMs: 8 * 60 * 1000 });
+        return await fetchRssAsJson(rssUrl);
       } catch (err) {
-        if (err && err.status === 429) setCooldown('rss', 8 * 60 * 1000, 'rate-limit');
+        if (err && err.status === 429) setCooldown('rss', NEWS_CONFIG.rss.cooldownMs, 'rate-limit');
+      }
+      try {
+        return await fetchRssAsXml(rssUrl);
+      } catch {
         return [];
       }
-      const items = data?.items || [];
-      return items.map(it => {
-        const title = it?.title || '';
-        const description = it?.description || it?.content || '';
-        const url = it?.link || '';
+    }
+
+    async function fetchLiveSignalsFromRss() {
+      if (isCoolingDown('rss')) return [];
+      const feeds = buildRssFeedUrls();
+      const pulls = await Promise.allSettled(feeds.map(fetchSingleRssFeed));
+      const rawItems = [];
+      pulls.forEach(p => {
+        if (p.status === 'fulfilled' && Array.isArray(p.value)) rawItems.push(...p.value);
+      });
+
+      return rawItems.map(it => {
+        const title = it.title || '';
+        const description = it.description || '';
+        const url = it.url || '';
         const text = articleText(title, description);
         const cls = classifyArticle(text);
         const ents = matchArticleToEntities(text);
-        const dateObj = it?.pubDate ? new Date(it.pubDate) : new Date();
-        const src = hostFromUrl(url) || it?.author || data?.feed?.title || 'Google News';
+        const dateObj = it.date ? new Date(it.date) : new Date();
+        const source = it.source || hostFromUrl(url) || 'Google News';
         return {
-          provider: 'google-rss',
-          title, url, dateObj: isNaN(dateObj) ? new Date() : dateObj,
+          provider: it.provider || 'google-rss',
+          title,
+          url,
+          dateObj: isNaN(dateObj) ? new Date() : dateObj,
           date: formatDateIso(isNaN(dateObj) ? new Date() : dateObj),
-          source: src, tier: sourceTier(url || src),
+          source,
+          tier: sourceTier(url || source),
           description,
-          isAI: cls.isAI, classes: cls.classes, entities: ents,
+          isAI: cls.isAI,
+          classes: cls.classes,
+          entities: ents,
         };
       });
     }
@@ -1351,12 +1445,11 @@
     }
 
     async function fetchLiveSignals() {
-      const results = await Promise.allSettled([
-        fetchLiveSignalsFromGNews(),
-        fetchLiveSignalsFromNewsData(),
-        fetchLiveSignalsFromGdelt(),
-        fetchLiveSignalsFromRss(),
-      ]);
+      const tasks = [fetchLiveSignalsFromGdelt(), fetchLiveSignalsFromRss()];
+      if (useOptionalApis()) {
+        tasks.push(fetchLiveSignalsFromGNews(), fetchLiveSignalsFromNewsData());
+      }
+      const results = await Promise.allSettled(tasks);
       const merged = [];
       results.forEach(r => { if (r.status === 'fulfilled') merged.push(...r.value); });
       const seen = new Set();
@@ -1376,6 +1469,7 @@
       el('gnewsKeyInput').value = getStoredValue(NEWS_CONFIG.gnews.keyStorage);
       el('newsDataKeyInput').value = getStoredValue(NEWS_CONFIG.newsdata.keyStorage);
       el('gnewsQueryInput').value = getGNewsQuery();
+      el('optionalApisToggle').checked = useOptionalApis();
       el('archiveFallbackToggle').checked = useArchiveFallback();
       el('settingsModal').classList.add('open');
     }
@@ -1388,10 +1482,12 @@
       const key = (el('gnewsKeyInput').value || '').trim();
       const newsDataKey = (el('newsDataKeyInput').value || '').trim();
       const query = (el('gnewsQueryInput').value || '').trim();
+      const optionalApis = !!el('optionalApisToggle').checked;
       const allowArchiveFallback = !!el('archiveFallbackToggle').checked;
       setStoredValue(NEWS_CONFIG.gnews.keyStorage, key);
       setStoredValue(NEWS_CONFIG.newsdata.keyStorage, newsDataKey);
       setStoredValue(NEWS_CONFIG.gnews.queryStorage, query || NEWS_CONFIG.gnews.defaultQuery);
+      setStoredValue(NEWS_CONFIG.optionalApisStorage, optionalApis ? '1' : '0');
       setStoredValue(NEWS_CONFIG.archiveFallbackStorage, allowArchiveFallback ? '1' : '0');
       closeSettingsModal();
       showToast('Settings saved. Click Refresh Signals.');
