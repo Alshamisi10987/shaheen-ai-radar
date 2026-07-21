@@ -97,6 +97,10 @@
     .xmark { width: 34px; height: 34px; border: 1px solid color-mix(in oklch, var(--accent), transparent 62%); border-radius: 10px; display: grid; place-items: center; color: var(--accent); font-weight: 900; box-shadow: 0 0 24px rgba(80,255,175,.10); }
     .head-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
     .live-pill { display: inline-flex; align-items: center; gap: 9px; color: var(--accent); border: 1px solid color-mix(in oklch, var(--accent), transparent 62%); background: color-mix(in oklch, var(--accent), transparent 91%); border-radius: 999px; padding: 9px 12px; font-weight: 800; font-size: 12px; letter-spacing: .015em; }
+    .status-pill { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 9px 12px; font-weight: 900; font-size: 12px; letter-spacing: .02em; border: 1px solid; }
+    .status-pill.live { color: var(--accent); border-color: color-mix(in oklch, var(--accent), transparent 62%); background: color-mix(in oklch, var(--accent), transparent 91%); }
+    .status-pill.limited { color: var(--warning); border-color: color-mix(in oklch, var(--warning), transparent 62%); background: color-mix(in oklch, var(--warning), transparent 92%); }
+    .status-pill.fallback { color: var(--danger); border-color: color-mix(in oklch, var(--danger), transparent 58%); background: color-mix(in oklch, var(--danger), transparent 92%); }
     .pulse { position: relative; width: 9px; height: 9px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 18px color-mix(in oklch, var(--accent), transparent 20%); }
     .pulse:after { content: ""; position: absolute; inset: -7px; border: 1px solid var(--accent); border-radius: 50%; animation: ping 1.6s cubic-bezier(0,0,.2,1) infinite; opacity: .8; }
     @keyframes ping { 75%, 100% { transform: scale(2.2); opacity: 0; } }
@@ -226,6 +230,24 @@
     .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); z-index: 120; border: 1px solid color-mix(in oklch, var(--accent), transparent 56%); background: color-mix(in oklch, var(--surface), black 8%); color: var(--text); border-radius: 999px; padding: 10px 14px; font-weight: 800; font-size: 12px; opacity: 0; pointer-events: none; transition: .22s ease; }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .empty { padding: 38px; text-align: center; color: var(--muted); }
+    .settings-dialog { max-width: 720px; height: auto; max-height: min(760px, calc(100vh - 68px)); }
+    .settings-body { padding: 18px; display: grid; gap: 14px; }
+    .settings-field { display: grid; gap: 7px; }
+    .settings-field label { font-size: 12px; font-weight: 800; color: var(--muted); letter-spacing: .02em; }
+    .settings-field input, .settings-field textarea {
+      width: 100%;
+      border: 1px solid color-mix(in oklch, var(--border), transparent 12%);
+      color: var(--text);
+      background: color-mix(in oklch, var(--surface2), transparent 14%);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      font-size: 13px;
+      outline: none;
+    }
+    .settings-field textarea { min-height: 90px; resize: vertical; }
+    .settings-field input:focus, .settings-field textarea:focus { border-color: color-mix(in oklch, var(--accent), transparent 45%); box-shadow: 0 0 0 4px color-mix(in oklch, var(--accent), transparent 90%); }
+    .settings-hint { font-size: 12px; color: var(--muted); line-height: 1.45; }
+    .settings-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
 
     .name-button {
       appearance: none;
@@ -320,6 +342,7 @@
       </div>
       <div class="head-actions">
         <span class="live-pill"><span class="pulse"></span><span id="liveTime">LIVE · updating</span></span>
+        <span class="status-pill limited" id="dataStatus">LIMITED</span>
         <button class="btn" id="exportFiltered">Export</button>
         <button class="btn ghost" id="settingsBtn">Settings</button>
       </div>
@@ -422,6 +445,44 @@
   </div>
   <div class="toast" id="toast">Copied</div>
   <div class="action-menu" id="actionMenu"></div>
+  <div class="modal" id="settingsModal" aria-hidden="true">
+    <div class="modal-backdrop" id="settingsModalBackdrop"></div>
+    <div class="dialog settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <div class="dialog-head">
+        <div class="avatar" style="width:62px;height:62px;border-radius:16px"><span>API</span></div>
+        <div>
+          <div class="dialog-title" id="settingsTitle">Live News Settings</div>
+          <div class="dialog-meta">Connect a free API key and query to keep data live.</div>
+        </div>
+        <div class="head-actions"><button class="btn small ghost" id="closeSettingsModal">Close</button></div>
+      </div>
+      <div class="settings-body">
+        <div class="settings-field">
+          <label for="gnewsKeyInput">GNews API key (free)</label>
+          <input id="gnewsKeyInput" type="password" placeholder="Paste your GNews key" autocomplete="off" />
+        </div>
+        <div class="settings-field">
+          <label for="newsDataKeyInput">NewsData.io API key (optional)</label>
+          <input id="newsDataKeyInput" type="password" placeholder="Paste your NewsData.io key" autocomplete="off" />
+          <div class="settings-hint">Adding a second key helps increase live news coverage.</div>
+        </div>
+        <div class="settings-field">
+          <label for="gnewsQueryInput">Query</label>
+          <textarea id="gnewsQueryInput" placeholder="UAE AI OR artificial intelligence"></textarea>
+          <div class="settings-hint">Tip: keep UAE + AI keywords together for cleaner signals.</div>
+        </div>
+        <div class="settings-field">
+          <label><input id="archiveFallbackToggle" type="checkbox" /> Use archive fallback when live APIs are limited</label>
+          <div class="settings-hint">Turn this off for real-only mode (recommended for strict live scoring).</div>
+        </div>
+        <div class="settings-actions">
+          <button class="btn ghost" id="clearGnewsBtn">Disable GNews</button>
+          <button class="btn" id="cancelSettingsBtn">Cancel</button>
+          <button class="btn primary" id="saveSettingsBtn">Save settings</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
     const ENTITIES = [{"id":"SHN-UAE-0207","name":"Emarat","aliases":["Emarat","Emirates General Petroleum Corporation","ministry government authority"],"domain":"emarat.ae","sector":"Energy / Retail Fuel","emirate":"Dubai","type":"Government Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://emarat.ae","monogram":"EM","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0016","name":"ADNOC Distribution","aliases":["ADNOC Dist","ADNOC Distribution"],"domain":"adnocdistribution.ae","sector":"Energy Retail","emirate":"Abu Dhabi","type":"Listed company","logo":"https://www.google.com/s2/favicons?sz=128&domain=adnocdistribution.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"AD"},{"id":"SHN-UAE-0087","name":"Chalhoub Group","aliases":["Chalhoub","Chalhoub Group"],"domain":"chalhoubgroup.com","sector":"Retail / Luxury","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain=chalhoubgroup.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"CG"},{"id":"SHN-UAE-0270","name":"GMG","aliases":["GMG","Gulf Marketing Group"],"domain":"gmg.com","sector":"Retail / Consumer","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://gmg.com","monogram":"GM","buyerPersona":"CFO / CPO / Procurement Head"},{"id":"SHN-UAE-0272","name":"Union Coop","aliases":["Union Coop","Union Cooperative"],"domain":"unioncoop.ae","sector":"Retail / Grocery","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://unioncoop.ae","monogram":"UC","buyerPersona":"CFO / CPO / Procurement Head"},{"id":"SHN-UAE-0085","name":"Majid Al Futtaim","aliases":["MAF","Majid Al Futtaim","Carrefour UAE owner","Carrefour owner","MAF retail"],"domain":"majidalfuttaim.com","sector":"Retail / Real Estate","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain=majidalfuttaim.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"MA"},{"id":"SHN-UAE-0088","name":"LuLu Group","aliases":["LuLu Group","LuLu Hypermarket","Lulu"],"domain":"lulu.ae","sector":"Retail / Grocery","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain=lulu.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"LG"},{"id":"SHN-UAE-0113","name":"UAE Cyber Security Council","aliases":["CSC","Cyber Security Council","UAE Cyber Security Council","ministry government authority"],"domain":"csc.gov.ae","sector":"Cybersecurity","emirate":"Abu Dhabi","type":"Federal Council","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://csc.gov.ae","monogram":"CS","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0077","name":"MBZUAI","aliases":["MBZUAI","Mohamed bin Zayed University of Artificial Intelligence"],"domain":"mbzuai.ac.ae","sector":"Education & AI Research","emirate":"Abu Dhabi","type":"University","logo":"https://www.google.com/s2/favicons?sz=128&domain=mbzuai.ac.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"MB"},{"id":"SHN-UAE-0279","name":"Dubai Duty Free","aliases":["DDF","Dubai Duty Free","ministry government authority"],"domain":"dubaidutyfree.com","sector":"Retail / Travel","emirate":"Dubai","type":"Government Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dubaidutyfree.com","monogram":"DF","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0001","name":"NXT Holding","aliases":["NXT","NXT Group","NXT Holding","Next","Next Holding","ne","nex","next","next holding","nxt holding"],"domain":"nxtholding.com","sector":"AI Partner / Holding","emirate":"Abu Dhabi","type":"Strategic partner","logo":"https://www.google.com/s2/favicons?sz=128&domain=nxtholding.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"NH"},{"id":"SHN-UAE-0086","name":"Al-Futtaim Group","aliases":["Al Futtaim","Al-Futtaim Group"],"domain":"alfuttaim.com","sector":"Retail / Automotive","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain=alfuttaim.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"AF"},{"id":"SHN-UAE-0152","name":"RAKBANK","aliases":["National Bank of Ras Al Khaimah","RAKBANK","bank"],"domain":"rakbank.ae","sector":"Banking","emirate":"Ras Al Khaimah","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://rakbank.ae","monogram":"RA","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0271","name":"Al Tayer Group","aliases":["Al Tayer","Al Tayer Group"],"domain":"altayer.com","sector":"Retail / Automotive","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://altayer.com","monogram":"AT","buyerPersona":"CFO / CPO / Procurement Head"},{"id":"SHN-UAE-0273","name":"Spinneys","aliases":["Spinneys","Spinneys UAE"],"domain":"spinneys.com","sector":"Retail / Grocery","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://spinneys.com","monogram":"SP","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0274","name":"Choithrams","aliases":["Choithram","Choithrams"],"domain":"choithrams.com","sector":"Retail / Grocery","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://choithrams.com","monogram":"CH","buyerPersona":"CFO / CPO / Procurement Head"},{"id":"SHN-UAE-0283","name":"Technology Innovation Institute","aliases":["TII","Technology Innovation Institute"],"domain":"tii.ae","sector":"Research / AI","emirate":"Abu Dhabi","type":"Research Institute","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://tii.ae","monogram":"TI","buyerPersona":"CIO / Digital Government Lead / CX Head"},{"id":"SHN-UAE-0181","name":"Phoenix Group","aliases":["Phoenix","Phoenix Group"],"domain":"phoenixgroupuae.com","sector":"Digital Assets / Technology","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://phoenixgroupuae.com","monogram":"PG","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-dubai-integrated-economic-zones--902","name":"Dubai Integrated Economic Zones Authority","aliases":["DIEZ","Dubai Silicon Oasis","DSO","Dubai CommerCity","DCC","Dubai Airport Free Zone","DAFZ","Dubai Integrated Economic Zones Authority","dubai integrated economic zones authority"],"domain":"diez.ae","sector":"Economic Zones / Technology Infrastructure","emirate":"Dubai","type":"Government authority","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://diez.ae","buyerPersona":"CEO / COO / CIO","monogram":"DI"},{"id":"SHN-UAE-0018","name":"ENOC","aliases":["ENOC","Emirates National Oil Company","ministry government authority"],"domain":"enoc.com","sector":"Energy","emirate":"Dubai","type":"Government-owned company","logo":"https://www.google.com/s2/favicons?sz=128&domain=enoc.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"EN"},{"id":"SHN-UAE-0084","name":"BEEAH Group","aliases":["BEEAH","BEEAH Group","Beeah"],"domain":"beeahgroup.com","sector":"Sustainability & Smart Cities","emirate":"Sharjah","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain=beeahgroup.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"BG"},{"id":"SHN-UAE-0099","name":"Ministry of Defence","aliases":["Defense Ministry","MOD","Ministry of Defence","ministry","ministry government authority"],"domain":"mod.gov.ae","sector":"Federal Government","emirate":"Abu Dhabi","type":"Federal Ministry","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://mod.gov.ae","monogram":"MD","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0114","name":"General Authority of Islamic Affairs, Endowments and Zakat","aliases":["Awqaf","General Authority of Islamic Affairs, Endowments and Zakat","Zakat Authority","ministry government authority"],"domain":"awqaf.gov.ae","sector":"Federal Government","emirate":"Abu Dhabi","type":"Federal Authority","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://awqaf.gov.ae","monogram":"GA","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0269","name":"Apparel Group","aliases":["Apparel","Apparel Group"],"domain":"apparelgroup.com","sector":"Retail","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://apparelgroup.com","monogram":"AG","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0292","name":"Noon Payments","aliases":["Noon Pay","Noon Payments"],"domain":"noonpayments.com","sector":"Fintech / Payments","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://noonpayments.com","monogram":"NP","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0047","name":"MGX","aliases":["MGX","MGX AI Fund"],"domain":"mgx.ae","sector":"AI Investment","emirate":"Abu Dhabi","type":"Investment company","logo":"https://www.google.com/s2/favicons?sz=128&domain=mgx.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"MG"},{"id":"SHN-UAE-0057","name":"Ministry of Health and Prevention","aliases":["MOHAP","Ministry of Health and Prevention","MoHAP","ministry"],"domain":"mohap.gov.ae","sector":"Healthcare / Federal Government","emirate":"Federal","type":"Ministry","logo":"https://www.google.com/s2/favicons?sz=128&domain=mohap.gov.ae","buyerPersona":"COO / CIO / Operations Head","monogram":"MH"},{"id":"SHN-UAE-0064","name":"TDRA","aliases":["TDRA","Telecommunications and Digital Government Regulatory Authority","ministry government authority"],"domain":"tdra.gov.ae","sector":"Regulator / Digital Government","emirate":"Federal","type":"Federal authority","logo":"https://www.google.com/s2/favicons?sz=128&domain=tdra.gov.ae","buyerPersona":"COO / CIO / Operations Head","monogram":"TD"},{"id":"SHN-UAE-0075","name":"Department of Culture and Tourism Abu Dhabi","aliases":["DCT","DCT Abu Dhabi","Department of Culture and Tourism Abu Dhabi","ministry government authority"],"domain":"dctabudhabi.ae","sector":"Tourism & Culture","emirate":"Abu Dhabi","type":"Government entity","logo":"https://www.google.com/s2/favicons?sz=128&domain=dctabudhabi.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"DC"},{"id":"SHN-UAE-0100","name":"Ministry of Cabinet Affairs","aliases":["Cabinet Affairs","Ministry of Cabinet Affairs","ministry","ministry government authority"],"domain":"moca.gov.ae","sector":"Federal Government","emirate":"Dubai","type":"Federal Ministry","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://moca.gov.ae","monogram":"MC","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0124","name":"Abu Dhabi Judicial Department","aliases":["ADJD","Abu Dhabi Judicial Department","ministry government authority"],"domain":"adjd.gov.ae","sector":"Justice / Government","emirate":"Abu Dhabi","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://adjd.gov.ae","monogram":"JD","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0157","name":"Ajman Bank","aliases":["Ajman Bank","Ajman Islamic Bank","bank"],"domain":"ajmanbank.ae","sector":"Banking","emirate":"Ajman","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://ajmanbank.ae","monogram":"AB","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0160","name":"Al Maryah Community Bank","aliases":["Al Maryah Community Bank","Mbank","bank"],"domain":"mbank.ae","sector":"Banking / Digital","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://mbank.ae","monogram":"AM","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0163","name":"Tabby","aliases":["Tabby","Tabby UAE"],"domain":"tabby.ai","sector":"Fintech","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://tabby.ai","monogram":"TA","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0185","name":"Dubai Investments","aliases":["DI","Dubai Investments"],"domain":"dubaiinvestments.com","sector":"Investment / Holding","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dubaiinvestments.com","monogram":"IN","buyerPersona":"CIO / Investment Director / IC Member"},{"id":"SHN-UAE-0197","name":"Emirates Nuclear Energy Corporation","aliases":["ENEC","Emirates Nuclear Energy Corporation","ministry government authority"],"domain":"enec.gov.ae","sector":"Energy / Nuclear","emirate":"Abu Dhabi","type":"Government Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://enec.gov.ae","monogram":"EN","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-X002","name":"Dubai Aviation City Corporation","aliases":["DACC","Dubai South owner","Dubai Aviation City","Dubai Aviation City Corporation","dubai aviation city corporation","Dubai South","DWC"],"domain":"dacc.ae","sector":"Aviation City / Economic Zone Owner","emirate":"Dubai","type":"Government Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dacc.ae","monogram":"DA","buyerPersona":"COO / CIO / Smart City Lead"},{"id":"SHN-UAE-dubai-healthcare-city-authority-903","name":"Dubai Healthcare City Authority","aliases":["DHCA","Dubai Healthcare City","DHCC","Dubai Healthcare City Authority","dubai healthcare city authority"],"domain":"dhcc.ae","sector":"Healthcare Free Zone / Regulation","emirate":"Dubai","type":"Government authority","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dhcc.ae","buyerPersona":"CEO / Health Regulation / CIO","monogram":"DH"},{"id":"SHN-UAE-X0290","name":"Dubai Centre for Artificial Intelligence","aliases":["Dubai Centre for Artificial Intelligence","DCAI","Dubai AI Centre","Dubai AI"],"domain":"dubaifuture.ae","sector":"Government AI / Innovation","emirate":"Dubai","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dubaifuture.ae","monogram":"DI","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0111","name":"Federal Competitiveness and Statistics Centre","aliases":["FCSC","Federal Competitiveness and Statistics Centre","Statistics Centre","ministry government authority"],"domain":"fcsc.gov.ae","sector":"Data / Government","emirate":"Dubai","type":"Federal Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://fcsc.gov.ae","monogram":"FC","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0115","name":"UAE Gender Balance Council","aliases":["Gender Balance Council","UAE Gender Balance Council","ministry government authority"],"domain":"genderbalancecouncil.gov.ae","sector":"Federal Government","emirate":"Dubai","type":"Federal Council","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://genderbalancecouncil.gov.ae","monogram":"GB","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0151","name":"National Bank of Fujairah","aliases":["NBF","National Bank of Fujairah","bank"],"domain":"nbf.ae","sector":"Banking","emirate":"Fujairah","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://nbf.ae","monogram":"NB","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0164","name":"Mamo","aliases":["Mamo","Mamo Pay"],"domain":"mamo.com","sector":"Fintech","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://mamo.com","monogram":"MA","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0166","name":"Sarwa","aliases":["Sarwa","Sarwa Digital Wealth"],"domain":"sarwa.co","sector":"Fintech / Wealth","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://sarwa.co","monogram":"SA","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0232","name":"Saudi German Hospital UAE","aliases":["Saudi German Hospital","Saudi German Hospital UAE"],"domain":"saudigerman.com","sector":"Healthcare","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://saudigerman.com","monogram":"SG","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-X0295","name":"VOLT UAE","aliases":["VOLT UAE","VOLT","VOLT data centres"],"domain":"volt.ae","sector":"AI-ready Data Centres","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://volt.ae","monogram":"VU","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-X0298","name":"Environment Agency Abu Dhabi","aliases":["Environment Agency Abu Dhabi","EAD"],"domain":"ead.gov.ae","sector":"Environment / Government","emirate":"Abu Dhabi","type":"Government Authority","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://ead.gov.ae","monogram":"ED","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0013","name":"Etisalat UAE","aliases":["Etisalat","Etisalat UAE","e& UAE"],"domain":"etisalat.ae","sector":"Telecom & Digital","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain=etisalat.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"ET"},{"id":"SHN-UAE-0050","name":"DIFC","aliases":["DIFC","Dubai International Financial Centre"],"domain":"difc.ae","sector":"Free Zone / Financial Services","emirate":"Dubai","type":"International financial centre","logo":"https://www.google.com/s2/favicons?sz=128&domain=difc.ae","buyerPersona":"COO / CIO / Operations Head","monogram":"DI"},{"id":"SHN-UAE-0073","name":"TAMM","aliases":["Abu Dhabi Government Services","TAMM","TAMM Abu Dhabi","ministry government authority"],"domain":"tamm.abudhabi","sector":"Digital Government Services","emirate":"Abu Dhabi","type":"Government platform","logo":"https://www.google.com/s2/favicons?sz=128&domain=tamm.abudhabi","buyerPersona":"COO / CIO / Operations Head","monogram":"TA"},{"id":"SHN-UAE-0096","name":"Ministry of Justice","aliases":["MOJ","Ministry of Justice","ministry","ministry government authority"],"domain":"moj.gov.ae","sector":"Federal Government","emirate":"Abu Dhabi","type":"Federal Ministry","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://moj.gov.ae","monogram":"MJ","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0098","name":"Ministry of Community Development","aliases":["MOCD","Ministry of Community Development","ministry","ministry government authority"],"domain":"mocd.gov.ae","sector":"Federal Government","emirate":"Dubai","type":"Federal Ministry","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://mocd.gov.ae","monogram":"MC","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0101","name":"Ministry of Culture","aliases":["Culture Ministry","MCY","Ministry of Culture","ministry","ministry government authority"],"domain":"mcy.gov.ae","sector":"Federal Government","emirate":"Abu Dhabi","type":"Federal Ministry","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://mcy.gov.ae","monogram":"MC","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0103","name":"Federal Authority for Identity, Citizenship, Customs and Port Security","aliases":["Federal Authority for Identity, Citizenship, Customs and Port Security","ICP","Identity and Citizenship","ministry government authority"],"domain":"icp.gov.ae","sector":"Federal Government","emirate":"Abu Dhabi","type":"Federal Authority","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://icp.gov.ae","monogram":"FA","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0106","name":"General Pension and Social Security Authority","aliases":["GPSSA","General Pension and Social Security Authority","Pension Authority","ministry government authority"],"domain":"gpssa.gov.ae","sector":"Federal Government","emirate":"Abu Dhabi","type":"Federal Authority","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://gpssa.gov.ae","monogram":"GP","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0107","name":"General Civil Aviation Authority","aliases":["Civil Aviation","GCAA","General Civil Aviation Authority","ministry government authority"],"domain":"gcaa.gov.ae","sector":"Federal Government","emirate":"Abu Dhabi","type":"Federal Authority","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://gcaa.gov.ae","monogram":"GC","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0112","name":"Al Etihad Credit Bureau","aliases":["AECB","Al Etihad Credit Bureau","Credit Bureau","ministry government authority"],"domain":"aecb.gov.ae","sector":"Financial Services","emirate":"Abu Dhabi","type":"Federal Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://aecb.gov.ae","monogram":"AE","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0116","name":"Abu Dhabi Police","aliases":["AD Police","Abu Dhabi Police","ministry government authority"],"domain":"adpolice.gov.ae","sector":"Public Safety","emirate":"Abu Dhabi","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://adpolice.gov.ae","monogram":"PO","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0133","name":"Shurooq","aliases":["Sharjah Investment and Development Authority","Shurooq","ministry government authority"],"domain":"shurooq.gov.ae","sector":"Investment / Tourism","emirate":"Sharjah","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://shurooq.gov.ae","monogram":"SH","buyerPersona":"CIO / Investment Director / IC Member"},{"id":"SHN-UAE-0153","name":"Sharjah Islamic Bank","aliases":["SIB","Sharjah Islamic Bank","bank"],"domain":"sib.ae","sector":"Banking","emirate":"Sharjah","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://sib.ae","monogram":"SI","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0168","name":"Hubpay","aliases":["HubPay","Hubpay"],"domain":"hubpay.ae","sector":"Fintech","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://hubpay.ae","monogram":"HU","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0177","name":"Multiply Group","aliases":["Multiply","Multiply Group"],"domain":"multiply.ae","sector":"Investment / Holding","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://multiply.ae","monogram":"MG","buyerPersona":"CIO / Investment Director / IC Member"},{"id":"SHN-UAE-0182","name":"Waha Capital","aliases":["Waha","Waha Capital"],"domain":"wahacapital.ae","sector":"Investment","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://wahacapital.ae","monogram":"WC","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0189","name":"ADNOC Drilling","aliases":["ADNOC Drilling","ADNOCDRILL"],"domain":"adnocdrilling.ae","sector":"Energy","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://adnocdrilling.ae","monogram":"AD","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0193","name":"ADNOC Onshore","aliases":["ADNOC Onshore"],"domain":"adnoc.ae","sector":"Energy","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://adnoc.ae","monogram":"AO","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0199","name":"Barakah One Company","aliases":["Barakah One","Barakah One Company"],"domain":"barakahone.ae","sector":"Energy / Nuclear","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://barakahone.ae","monogram":"BO","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0204","name":"Dana Gas","aliases":["Dana Gas","DanaGas"],"domain":"danagas.com","sector":"Energy","emirate":"Sharjah","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://danagas.com","monogram":"DG","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0258","name":"Emirates Driving Company","aliases":["EDC","Emirates Driving Company"],"domain":"edcad.ae","sector":"Mobility / Training","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://edcad.ae","monogram":"ED","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0102","name":"Artificial Intelligence, Digital Economy and Remote Work Applications Office","aliases":["AI Office","Artificial Intelligence, Digital Economy and Remote Work Applications Office","Minister of AI","UAE AI Office","ministry government authority"],"domain":"ai.gov.ae","sector":"Federal Government","emirate":"Dubai","type":"Federal Office","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://ai.gov.ae","monogram":"AI","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0154","name":"Emirates Islamic","aliases":["EI Bank","Emirates Islamic","bank"],"domain":"emiratesislamic.ae","sector":"Banking","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://emiratesislamic.ae","monogram":"EI","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0012","name":"du","aliases":["EITC","Emirates Integrated Telecommunications Company","du"],"domain":"du.ae","sector":"Telecom & Digital","emirate":"Dubai","type":"Listed company","logo":"https://www.google.com/s2/favicons?sz=128&domain=du.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"DU"},{"id":"SHN-UAE-0048","name":"Abu Dhabi Investment Office","aliases":["ADIO","Abu Dhabi Investment Office","ministry government authority"],"domain":"adio.gov.ae","sector":"Investment Promotion","emirate":"Abu Dhabi","type":"Government entity","logo":"https://www.google.com/s2/favicons?sz=128&domain=adio.gov.ae","buyerPersona":"CEO Office / Board Secretary / Strategy Head","monogram":"IO"},{"id":"SHN-UAE-0061","name":"Ministry of Energy and Infrastructure","aliases":["MOEI","Ministry of Energy and Infrastructure","MoEI","ministry"],"domain":"moei.gov.ae","sector":"Federal Government / Energy","emirate":"Federal","type":"Ministry","logo":"https://www.google.com/s2/favicons?sz=128&domain=moei.gov.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"ME"},{"id":"SHN-UAE-0076","name":"Dubai Department of Economy and Tourism","aliases":["DET","DET Dubai","Dubai Department of Economy and Tourism","Dubai Economy and Tourism","ministry government authority"],"domain":"det.gov.ae","sector":"Tourism & Economy","emirate":"Dubai","type":"Government entity","logo":"https://www.google.com/s2/favicons?sz=128&domain=det.gov.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"DE"},{"id":"SHN-UAE-0094","name":"Ministry of Interior","aliases":["Interior Ministry","MOI","Ministry of Interior","ministry","ministry government authority"],"domain":"moi.gov.ae","sector":"Federal Government","emirate":"Abu Dhabi","type":"Federal Ministry","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://moi.gov.ae","monogram":"MI","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0104","name":"National Emergency Crisis and Disaster Management Authority","aliases":["Emergency Crisis Authority","NCEMA","National Emergency Crisis and Disaster Management Authority","ministry government authority"],"domain":"ncema.gov.ae","sector":"Federal Government","emirate":"Abu Dhabi","type":"Federal Authority","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://ncema.gov.ae","monogram":"NE","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0131","name":"Fujairah Municipality","aliases":["Fujairah Municipality","ministry government authority"],"domain":"fujmun.gov.ae","sector":"Municipality / Government","emirate":"Fujairah","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://fujmun.gov.ae","monogram":"FM","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0132","name":"Umm Al Quwain Government","aliases":["UAQ Government","Umm Al Quwain Government","ministry government authority"],"domain":"uaq.ae","sector":"Government","emirate":"Umm Al Quwain","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://uaq.ae","monogram":"UA","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0155","name":"Wio Bank","aliases":["Wio","Wio Bank","bank"],"domain":"wio.io","sector":"Banking / Digital","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://wio.io","monogram":"WB","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0156","name":"Zand Bank","aliases":["Zand","Zand Bank","bank"],"domain":"zand.ae","sector":"Banking / Digital","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://zand.ae","monogram":"ZB","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0158","name":"National Bank of Umm Al Qaiwain","aliases":["NBQ","National Bank of Umm Al Qaiwain","bank"],"domain":"nbq.ae","sector":"Banking","emirate":"Umm Al Quwain","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://nbq.ae","monogram":"NB","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0167","name":"Stake","aliases":["Stake","Stake UAE"],"domain":"stake.com","sector":"Fintech / Real Estate","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://stake.com","monogram":"ST","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0209","name":"Mubadala Energy","aliases":["Mubadala Energy","Mubadala Petroleum"],"domain":"mubadalaenergy.com","sector":"Energy","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://mubadalaenergy.com","monogram":"ME","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-expo-city-dubai-authority-905","name":"Expo City Dubai Authority","aliases":["Expo City","Expo 2020 legacy","Expo City Dubai","Expo City Dubai Authority","expo city dubai authority"],"domain":"expocitydubai.com","sector":"Government / Urban Development","emirate":"Dubai","type":"Government authority","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://expocitydubai.com","buyerPersona":"CEO / COO / Smart City Lead","monogram":"EC"},{"id":"SHN-UAE-0030","name":"First Abu Dhabi Bank","aliases":["Bank FAB","FAB","First Abu Dhabi Bank","bank"],"domain":"bankfab.com","sector":"Banking & Financial Services","emirate":"Abu Dhabi","type":"Listed company","logo":"https://www.google.com/s2/favicons?sz=128&domain=bankfab.com","buyerPersona":"COO / CIO / Operations Head","monogram":"FB"},{"id":"SHN-UAE-X0294","name":"Open Innovation AI","aliases":["Open Innovation AI","Open Innovation Artificial Intelligence","CERT Open Innovation AI"],"domain":"openinnovation.ai","sector":"AI / Technology","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://openinnovation.ai","monogram":"OA","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0025","name":"Etihad Rail","aliases":["Etihad Rail","Etihad Railway","ministry government authority"],"domain":"etihadrail.ae","sector":"Transport & Infrastructure","emirate":"Abu Dhabi","type":"Government-owned company","logo":"https://www.google.com/s2/favicons?sz=128&domain=etihadrail.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"ER"},{"id":"SHN-UAE-0066","name":"Securities and Commodities Authority","aliases":["SCA","Securities and Commodities Authority","ministry government authority"],"domain":"sca.gov.ae","sector":"Regulator / Capital Markets","emirate":"Federal","type":"Federal authority","logo":"https://www.google.com/s2/favicons?sz=128&domain=sca.gov.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"SC"},{"id":"SHN-UAE-0074","name":"Department of Municipalities and Transport","aliases":["DMT","DMT Abu Dhabi","Department of Municipalities and Transport","ministry government authority"],"domain":"dmt.gov.ae","sector":"Municipal / Transport Government","emirate":"Abu Dhabi","type":"Government entity","logo":"https://www.google.com/s2/favicons?sz=128&domain=dmt.gov.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"DM"},{"id":"SHN-UAE-0109","name":"Emirates Health Services","aliases":["EHS","Emirates Health Services","ministry government authority"],"domain":"ehs.gov.ae","sector":"Healthcare","emirate":"Dubai","type":"Federal Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://ehs.gov.ae","monogram":"EH","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0150","name":"Commercial Bank of Dubai","aliases":["CBD Bank","Commercial Bank of Dubai","bank"],"domain":"cbd.ae","sector":"Banking","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://cbd.ae","monogram":"CB","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0175","name":"International Holding Company","aliases":["IHC","International Holding Company"],"domain":"ihcuae.com","sector":"Investment / Holding","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://ihcuae.com","monogram":"IH","buyerPersona":"CIO / Investment Director / IC Member"},{"id":"SHN-UAE-0176","name":"Alpha Dhabi Holding","aliases":["Alpha Dhabi","Alpha Dhabi Holding"],"domain":"alphadhabi.com","sector":"Investment / Holding","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://alphadhabi.com","monogram":"AH","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0178","name":"2PointZero","aliases":["2PointZero","Two Point Zero"],"domain":"2pointzero.ae","sector":"Investment / Holding","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://2pointzero.ae","monogram":"2P","buyerPersona":"CIO / Investment Director / IC Member"},{"id":"SHN-UAE-0227","name":"Aster DM Healthcare","aliases":["Aster","Aster DM Healthcare"],"domain":"asterdmhealthcare.com","sector":"Healthcare","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://asterdmhealthcare.com","monogram":"AD","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0246","name":"American University in Dubai","aliases":["AUD","American University in Dubai"],"domain":"aud.edu","sector":"Education","emirate":"Dubai","type":"University","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://aud.edu","monogram":"AU","buyerPersona":"CHRO / People Head / L&D Head"},{"id":"SHN-UAE-0315","name":"Emirates News Agency","aliases":["Emirates News Agency","WAM","ministry government authority"],"domain":"wam.ae","sector":"Media / Government","emirate":"Abu Dhabi","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://wam.ae","monogram":"EN","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0011","name":"e&","aliases":["E and","Etisalat Group","eand","e& enterprise","e& money","Etisalat AI"],"domain":"eand.com","sector":"Telecom & Digital","emirate":"Abu Dhabi","type":"Listed company","logo":"https://www.google.com/s2/favicons?sz=128&domain=eand.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"E"},{"id":"SHN-UAE-0055","name":"Department of Health Abu Dhabi","aliases":["Department of Health Abu Dhabi","DoH","DoH Abu Dhabi","ministry government authority","Abu Dhabi Biobank","Health AI Abu Dhabi"],"domain":"doh.gov.ae","sector":"Healthcare Regulator","emirate":"Abu Dhabi","type":"Government entity","logo":"https://www.google.com/s2/favicons?sz=128&domain=doh.gov.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"DH"},{"id":"SHN-UAE-0256","name":"Abu Dhabi Mobility","aliases":["Abu Dhabi Mobility","ITC","Integrated Transport Centre","ministry government authority"],"domain":"admobility.gov.ae","sector":"Mobility / Government","emirate":"Abu Dhabi","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://admobility.gov.ae","monogram":"MO","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0285","name":"Advanced Technology Research Council","aliases":["ATRC","Advanced Technology Research Council","ministry government authority"],"domain":"atrc.ae","sector":"Research / Government","emirate":"Abu Dhabi","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://atrc.ae","monogram":"AT","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-X004","name":"Meraas Holding","aliases":["Meraas","Meraas Holding","Meraas Holding","meraas holding"],"domain":"meraas.com","sector":"Real Estate / Lifestyle Holding","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://meraas.com","monogram":"MH","buyerPersona":"CEO / Strategy / COO"},{"id":"SHN-UAE-0069","name":"Dubai Electricity and Water Authority","aliases":["DEWA","Dubai Electricity and Water Authority","ministry government authority","Rammas","agentic AI DEWA"],"domain":"dewa.gov.ae","sector":"Utilities & Energy","emirate":"Dubai","type":"Government entity","logo":"https://www.google.com/s2/favicons?sz=128&domain=dewa.gov.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"EW"},{"id":"SHN-UAE-0031","name":"Emirates NBD","aliases":["ENBD","Emirates Bank","Emirates NBD","NBD","bank"],"domain":"emiratesnbd.com","sector":"Banking & Financial Services","emirate":"Dubai","type":"Listed company","logo":"https://www.google.com/s2/favicons?sz=128&domain=emiratesnbd.com","buyerPersona":"COO / CIO / Operations Head","monogram":"EN"},{"id":"SHN-UAE-0033","name":"Mashreq","aliases":["Mashreq","Mashreq Bank","bank"],"domain":"mashreq.com","sector":"Banking & Financial Services","emirate":"Dubai","type":"Listed company","logo":"https://www.google.com/s2/favicons?sz=128&domain=mashreq.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"MA"},{"id":"SHN-UAE-0035","name":"Abu Dhabi Islamic Bank","aliases":["ADIB","Abu Dhabi Islamic Bank","bank"],"domain":"adib.ae","sector":"Banking & Financial Services","emirate":"Abu Dhabi","type":"Listed company","logo":"https://www.google.com/s2/favicons?sz=128&domain=adib.ae","buyerPersona":"COO / CIO / Operations Head","monogram":"IB"},{"id":"SHN-UAE-0059","name":"Ministry of Economy and Tourism","aliases":["Ministry of Economy","Ministry of Economy and Tourism","Ministry of Tourism","MoET","ministry"],"domain":"moet.gov.ae","sector":"Federal Government / Economy","emirate":"Federal","type":"Ministry","logo":"https://www.google.com/s2/favicons?sz=128&domain=moet.gov.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"ME"},{"id":"SHN-UAE-0062","name":"Ministry of Education","aliases":["MOE","Ministry of Education","MoE","ministry"],"domain":"moe.gov.ae","sector":"Federal Government / Education","emirate":"Federal","type":"Ministry","logo":"https://www.google.com/s2/favicons?sz=128&domain=moe.gov.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"ME"},{"id":"SHN-UAE-0068","name":"Digital Dubai","aliases":["Digital Dubai","Dubai Digital Authority","Smart Dubai","ministry government authority"],"domain":"digitaldubai.ae","sector":"Digital Government","emirate":"Dubai","type":"Government entity","logo":"https://www.google.com/s2/favicons?sz=128&domain=digitaldubai.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"DI"},{"id":"SHN-UAE-0082","name":"Dubai Future Foundation","aliases":["DFF","Dubai Future Foundation","ministry government authority"],"domain":"dubaifuture.ae","sector":"Innovation & Government","emirate":"Dubai","type":"Government entity","logo":"https://www.google.com/s2/favicons?sz=128&domain=dubaifuture.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"FF"},{"id":"SHN-UAE-0136","name":"Dubai Sports Council","aliases":["DSC","Dubai Sports Council","ministry government authority"],"domain":"dubaisc.ae","sector":"Sports / Government","emirate":"Dubai","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dubaisc.ae","monogram":"SC","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0159","name":"United Arab Bank","aliases":["UAB","United Arab Bank","bank"],"domain":"uab.ae","sector":"Banking","emirate":"Sharjah","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://uab.ae","monogram":"UA","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0183","name":"Invest AD","aliases":["Abu Dhabi Investment Company","Invest AD"],"domain":"investad.com","sector":"Investment","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://investad.com","monogram":"IA","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0191","name":"ADNOC Refining","aliases":["ADNOC Refining","TAKREER"],"domain":"adnoc.ae","sector":"Energy","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://adnoc.ae","monogram":"AR","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0200","name":"Emirates Water and Electricity Company","aliases":["EWEC","Emirates Water and Electricity Company","ministry government authority"],"domain":"ewec.ae","sector":"Utilities","emirate":"Abu Dhabi","type":"Government Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://ewec.ae","monogram":"EW","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0225","name":"Cleveland Clinic Abu Dhabi","aliases":["CCAD","Cleveland Clinic Abu Dhabi"],"domain":"clevelandclinicabudhabi.ae","sector":"Healthcare","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://clevelandclinicabudhabi.ae","monogram":"CC","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0229","name":"American Hospital Dubai","aliases":["AHD","American Hospital Dubai"],"domain":"ahdubai.com","sector":"Healthcare","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://ahdubai.com","monogram":"AH","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-X0297","name":"Emirates Drug Establishment","aliases":["Emirates Drug Establishment","EDE"],"domain":"ede.gov.ae","sector":"Healthcare Regulation","emirate":"Abu Dhabi","type":"Federal Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://ede.gov.ae","monogram":"EE","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0014","name":"ADNOC","aliases":["ADNOC","Abu Dhabi National Oil Company","ministry government authority"],"domain":"adnoc.ae","sector":"Energy","emirate":"Abu Dhabi","type":"Government-owned company","logo":"https://www.google.com/s2/favicons?sz=128&domain=adnoc.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"AD"},{"id":"SHN-UAE-0105","name":"Federal Authority for Government Human Resources","aliases":["FAHR","Federal Authority for Government Human Resources","Government HR","ministry government authority"],"domain":"fahr.gov.ae","sector":"Federal Government","emirate":"Dubai","type":"Federal Authority","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://fahr.gov.ae","monogram":"FA","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0046","name":"Emirates Investment Authority","aliases":["EIA","Emirates Investment Authority","ministry government authority"],"domain":"eia.gov.ae","sector":"Investment & Holding","emirate":"Abu Dhabi","type":"Federal authority","logo":"https://www.google.com/s2/favicons?sz=128&domain=eia.gov.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"EI"},{"id":"SHN-UAE-0052","name":"PureHealth","aliases":["Pure Health","PureHealth"],"domain":"purehealth.ae","sector":"Healthcare","emirate":"Abu Dhabi","type":"Listed company","logo":"https://www.google.com/s2/favicons?sz=128&domain=purehealth.ae","buyerPersona":"COO / CIO / Operations Head","monogram":"PU"},{"id":"SHN-UAE-0067","name":"UAE Space Agency","aliases":["Space Agency","UAE Space Agency","ministry government authority"],"domain":"space.gov.ae","sector":"Space / Federal Government","emirate":"Federal","type":"Federal authority","logo":"https://www.google.com/s2/favicons?sz=128&domain=space.gov.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"SA"},{"id":"SHN-UAE-0129","name":"Ajman Free Zone","aliases":["AFZ","Ajman Free Zone","Ajman Freezone"],"domain":"afz.ae","sector":"Free Zone","emirate":"Ajman","type":"Free Zone","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://afz.ae","monogram":"AF","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0130","name":"RAKEZ","aliases":["RAKEZ","Ras Al Khaimah Economic Zone"],"domain":"rakez.com","sector":"Free Zone","emirate":"Ras Al Khaimah","type":"Free Zone","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://rakez.com","monogram":"RA","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0137","name":"Dubai World Trade Centre","aliases":["DWTC","Dubai World Trade Centre","ministry government authority"],"domain":"dwtc.com","sector":"Events / Free Zone","emirate":"Dubai","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dwtc.com","monogram":"WT","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0171","name":"Dubai Insurance","aliases":["DIN","Dubai Insurance"],"domain":"dubins.ae","sector":"Insurance","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dubins.ae","monogram":"IN","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0173","name":"Daman","aliases":["Daman","National Health Insurance Company"],"domain":"damanhealth.ae","sector":"Insurance / Healthcare","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://damanhealth.ae","monogram":"DA","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0179","name":"Modon Holding","aliases":["Modon","Modon Holding"],"domain":"modon.com","sector":"Real Estate / Holding","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://modon.com","monogram":"MH","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0194","name":"ADNOC Sour Gas","aliases":["ADNOC Sour Gas","Al Hosn Gas"],"domain":"adnoc.ae","sector":"Energy","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://adnoc.ae","monogram":"AS","buyerPersona":"CFO / CPO / Procurement Head"},{"id":"SHN-UAE-0198","name":"Nawah Energy Company","aliases":["Nawah","Nawah Energy Company"],"domain":"nawah.ae","sector":"Energy / Nuclear","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://nawah.ae","monogram":"NE","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0206","name":"Dragon Oil","aliases":["Dragon Oil","DragonOil"],"domain":"dragonoil.com","sector":"Energy","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dragonoil.com","monogram":"DO","buyerPersona":"CFO / CPO / Procurement Head"},{"id":"SHN-UAE-0228","name":"NMC Healthcare","aliases":["NMC","NMC Healthcare"],"domain":"nmc.ae","sector":"Healthcare","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://nmc.ae","monogram":"NH","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0230","name":"King's College Hospital Dubai","aliases":["KCH Dubai","King's College Hospital Dubai"],"domain":"kingscollegehospitaldubai.com","sector":"Healthcare","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://kingscollegehospitaldubai.com","monogram":"KS","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0235","name":"Life Healthcare Group","aliases":["Life Healthcare Group","Life Pharmacy"],"domain":"life-me.com","sector":"Healthcare / Pharmacy","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://life-me.com","monogram":"LH","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0299","name":"Kitopi","aliases":["Kitopi","Kitopi UAE"],"domain":"kitopi.com","sector":"FoodTech / Cloud Kitchens","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://kitopi.com","monogram":"KI","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0034","name":"Dubai Islamic Bank","aliases":["DIB","Dubai Islamic Bank","bank"],"domain":"dib.ae","sector":"Banking & Financial Services","emirate":"Dubai","type":"Listed company","logo":"https://www.google.com/s2/favicons?sz=128&domain=dib.ae","buyerPersona":"COO / CIO / Operations Head","monogram":"IB"},{"id":"SHN-UAE-X0299","name":"Dubai Civil Defence","aliases":["Dubai Civil Defence","DCD"],"domain":"dcd.gov.ae","sector":"Public Safety / Government","emirate":"Dubai","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dcd.gov.ae","monogram":"DD","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0040","name":"Dubai Holding","aliases":["Dubai Holding","Dubai Holding Group","ministry government authority","Atlantis owner","Atlantis Dubai owner","Aither","Palantir partnership","Dubai Holding AI"],"domain":"dubaiholding.com","sector":"Holding / Real Estate / Tourism","emirate":"Dubai","type":"Government-owned holding","logo":"https://www.google.com/s2/favicons?sz=128&domain=dubaiholding.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"HO"},{"id":"SHN-UAE-0045","name":"Investment Corporation of Dubai","aliases":["ICD","Investment Corporation of Dubai"],"domain":"icd.gov.ae","sector":"Investment & Holding","emirate":"Dubai","type":"Sovereign investment company","logo":"https://www.google.com/s2/favicons?sz=128&domain=icd.gov.ae","buyerPersona":"CIO / Investment Committee / Strategy Director","monogram":"IC"},{"id":"SHN-UAE-0042","name":"Mubadala","aliases":["Mubadala","Mubadala Investment Company"],"domain":"mubadala.com","sector":"Investment & Holding","emirate":"Abu Dhabi","type":"Sovereign investment company","logo":"https://www.google.com/s2/favicons?sz=128&domain=mubadala.com","buyerPersona":"CIO / Investment Committee / Strategy Director","monogram":"MU"},{"id":"SHN-UAE-0058","name":"Ministry of Finance","aliases":["Ministry of Finance","MoF","UAE Ministry of Finance","ministry"],"domain":"mof.gov.ae","sector":"Federal Government / Finance","emirate":"Federal","type":"Ministry","logo":"https://www.google.com/s2/favicons?sz=128&domain=mof.gov.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"MF"},{"id":"SHN-UAE-0081","name":"Mohammed Bin Rashid Space Centre","aliases":["MBRSC","Mohammed Bin Rashid Space Centre","ministry government authority"],"domain":"mbrsc.ae","sector":"Space & Research","emirate":"Dubai","type":"Government entity","logo":"https://www.google.com/s2/favicons?sz=128&domain=mbrsc.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"MB"},{"id":"SHN-UAE-0123","name":"Dubai Courts","aliases":["Dubai Court","Dubai Courts","ministry government authority"],"domain":"dc.gov.ae","sector":"Justice / Government","emirate":"Dubai","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dc.gov.ae","monogram":"CO","buyerPersona":"CIO / Digital Government Lead / CX Head"},{"id":"SHN-UAE-0138","name":"Jebel Ali Free Zone","aliases":["JAFZA","Jebel Ali Free Zone"],"domain":"jafza.ae","sector":"Free Zone / Logistics","emirate":"Dubai","type":"Free Zone","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://jafza.ae","monogram":"JA","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0165","name":"Ziina","aliases":["Ziina","Ziina Pay"],"domain":"ziina.com","sector":"Fintech","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://ziina.com","monogram":"ZI","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0208","name":"Sharjah National Oil Corporation","aliases":["SNOC","Sharjah National Oil Corporation","ministry government authority"],"domain":"snoc.ae","sector":"Energy","emirate":"Sharjah","type":"Government Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://snoc.ae","monogram":"SN","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0216","name":"Wasl","aliases":["Wasl","Wasl Properties","ministry government authority"],"domain":"wasl.ae","sector":"Real Estate / Hospitality","emirate":"Dubai","type":"Government Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://wasl.ae","monogram":"WA","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0226","name":"Mediclinic Middle East","aliases":["Mediclinic Middle East","Mediclinic UAE"],"domain":"mediclinic.ae","sector":"Healthcare","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://mediclinic.ae","monogram":"MM","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0233","name":"Emirates Hospitals Group","aliases":["EHG","Emirates Hospitals Group"],"domain":"emirateshospitals.ae","sector":"Healthcare","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://emirateshospitals.ae","monogram":"EH","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0240","name":"Zayed University","aliases":["ZU","Zayed University"],"domain":"zu.ac.ae","sector":"Education","emirate":"Abu Dhabi","type":"University","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://zu.ac.ae","monogram":"ZU","buyerPersona":"CHRO / People Head / L&D Head"},{"id":"SHN-UAE-0254","name":"Aramex","aliases":["Aramex","Aramex PJSC"],"domain":"aramex.com","sector":"Logistics","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://aramex.com","monogram":"AR","buyerPersona":"CFO / CPO / Procurement Head"},{"id":"SHN-UAE-0049","name":"ADGM","aliases":["ADGM","Abu Dhabi Global Market"],"domain":"adgm.com","sector":"Free Zone / Financial Services","emirate":"Abu Dhabi","type":"International financial centre","logo":"https://www.google.com/s2/favicons?sz=128&domain=adgm.com","buyerPersona":"COO / CIO / Operations Head","monogram":"AD"},{"id":"SHN-UAE-X0291","name":"Emirates Development Bank","aliases":["Emirates Development Bank","EDB"],"domain":"edb.gov.ae","sector":"Development Banking","emirate":"Abu Dhabi","type":"Government Bank","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://edb.gov.ae","monogram":"EB","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-X0301","name":"Al Fardan Ventures","aliases":["Al Fardan Ventures","AlFardan Ventures"],"domain":"alfardanventures.com","sector":"Investment / Venture Capital","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://alfardanventures.com","monogram":"AV","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0056","name":"Dubai Health Authority","aliases":["DHA","Dubai Health Authority","ministry government authority"],"domain":"dha.gov.ae","sector":"Healthcare Regulator","emirate":"Dubai","type":"Government entity","logo":"https://www.google.com/s2/favicons?sz=128&domain=dha.gov.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"HA"},{"id":"SHN-UAE-0036","name":"Central Bank of the UAE","aliases":["CBUAE","Central Bank of the UAE","UAE Central Bank","bank","ministry government authority"],"domain":"centralbank.ae","sector":"Regulator / Financial Services","emirate":"Abu Dhabi","type":"Federal authority","logo":"https://www.google.com/s2/favicons?sz=128&domain=centralbank.ae","buyerPersona":"COO / CIO / Operations Head","monogram":"CB"},{"id":"SHN-UAE-0071","name":"Dubai Police","aliases":["Dubai Police","Dubai Police GHQ","ministry government authority"],"domain":"dubaipolice.gov.ae","sector":"Public Safety","emirate":"Dubai","type":"Government entity","logo":"https://www.google.com/s2/favicons?sz=128&domain=dubaipolice.gov.ae","buyerPersona":"COO / CIO / Operations Head","monogram":"PO"},{"id":"SHN-UAE-0072","name":"Abu Dhabi Digital Authority","aliases":["ADDA","Abu Dhabi Digital Authority","ministry government authority"],"domain":"adda.gov.ae","sector":"Digital Government","emirate":"Abu Dhabi","type":"Government entity","logo":"https://www.google.com/s2/favicons?sz=128&domain=adda.gov.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"DA"},{"id":"SHN-UAE-0097","name":"Ministry of Climate Change and Environment","aliases":["Climate Change Ministry","MOCCAE","Ministry of Climate Change and Environment","ministry","ministry government authority"],"domain":"moccae.gov.ae","sector":"Federal Government","emirate":"Dubai","type":"Federal Ministry","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://moccae.gov.ae","monogram":"MC","buyerPersona":"CIO / Digital Government Lead / CX Head"},{"id":"SHN-UAE-0108","name":"Emirates Schools Establishment","aliases":["ESE","Emirates Schools","Emirates Schools Establishment","ministry government authority"],"domain":"ese.gov.ae","sector":"Education","emirate":"Dubai","type":"Federal Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://ese.gov.ae","monogram":"ES","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0110","name":"Federal Authority for Nuclear Regulation","aliases":["FANR","Federal Authority for Nuclear Regulation","Nuclear Regulation","ministry government authority"],"domain":"fanr.gov.ae","sector":"Energy / Regulation","emirate":"Abu Dhabi","type":"Federal Authority","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://fanr.gov.ae","monogram":"FA","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0127","name":"Dubai Health","aliases":["Dubai Academic Health Corporation","Dubai Health","ministry government authority"],"domain":"dubaihealth.ae","sector":"Healthcare","emirate":"Dubai","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dubaihealth.ae","monogram":"HE","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0169","name":"Sukoon Insurance","aliases":["Oman Insurance","Sukoon Insurance"],"domain":"sukoon.com","sector":"Insurance","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://sukoon.com","monogram":"SI","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0190","name":"ADNOC Logistics & Services","aliases":["ADNOC L&S","ADNOC LS","ADNOC Logistics and Services"],"domain":"adnocls.ae","sector":"Energy / Logistics","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://adnocls.ae","monogram":"AL","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0231","name":"Fakeeh University Hospital","aliases":["Fakeeh","Fakeeh University Hospital"],"domain":"fakeeh.care","sector":"Healthcare","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://fakeeh.care","monogram":"FU","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0236","name":"Al Zahra Hospital Dubai","aliases":["AZHD","Al Zahra Hospital Dubai"],"domain":"azhd.ae","sector":"Healthcare","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://azhd.ae","monogram":"AZ","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0248","name":"GEMS Education","aliases":["GEMS","GEMS Education"],"domain":"gemseducation.com","sector":"Education","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://gemseducation.com","monogram":"GE","buyerPersona":"CHRO / People Head / L&D Head"},{"id":"SHN-UAE-0291","name":"PayBy","aliases":["PayBy","PayBy UAE"],"domain":"payby.com","sector":"Fintech / Payments","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://payby.com","monogram":"PA","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0300","name":"CAFU","aliases":["CAFU","Cafu"],"domain":"cafu.com","sector":"Mobility / EnergyTech","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://cafu.com","monogram":"CA","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0095","name":"Ministry of Foreign Affairs","aliases":["Foreign Affairs","MOFA","Ministry of Foreign Affairs","ministry","ministry government authority"],"domain":"mofa.gov.ae","sector":"Federal Government","emirate":"Abu Dhabi","type":"Federal Ministry","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://mofa.gov.ae","monogram":"MF","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0015","name":"ADNOC Gas","aliases":["ADNOC Gas","ADNOC Gas PLC"],"domain":"adnocgas.ae","sector":"Energy","emirate":"Abu Dhabi","type":"Listed company","logo":"https://www.google.com/s2/favicons?sz=128&domain=adnocgas.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"AG"},{"id":"SHN-UAE-0026","name":"Emirates Airline","aliases":["Emirates","Emirates Airline"],"domain":"emirates.com","sector":"Aviation & Travel","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain=emirates.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"EA"},{"id":"SHN-UAE-0043","name":"ADQ","aliases":["ADQ","Abu Dhabi Developmental Holding Company"],"domain":"adq.ae","sector":"Investment & Holding","emirate":"Abu Dhabi","type":"Sovereign holding company","logo":"https://www.google.com/s2/favicons?sz=128&domain=adq.ae","buyerPersona":"CIO / Investment Committee / Strategy Director","monogram":"AD"},{"id":"SHN-UAE-0054","name":"SEHA","aliases":["Abu Dhabi Health Services Company","SEHA"],"domain":"seha.ae","sector":"Healthcare","emirate":"Abu Dhabi","type":"Healthcare network","logo":"https://www.google.com/s2/favicons?sz=128&domain=seha.ae","buyerPersona":"COO / CIO / Operations Head","monogram":"SE"},{"id":"SHN-UAE-0065","name":"Federal Tax Authority","aliases":["FTA","Federal Tax Authority","ministry government authority"],"domain":"tax.gov.ae","sector":"Federal Government / Tax","emirate":"Federal","type":"Federal authority","logo":"https://www.google.com/s2/favicons?sz=128&domain=tax.gov.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"FT"},{"id":"SHN-UAE-0147","name":"Twofour54","aliases":["Twofour54","twofour54 Abu Dhabi"],"domain":"twofour54.com","sector":"Media / Free Zone","emirate":"Abu Dhabi","type":"Free Zone","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://twofour54.com","monogram":"TW","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0180","name":"Q Holding","aliases":["Q Holding","QH"],"domain":"qholding.ae","sector":"Real Estate / Holding","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://qholding.ae","monogram":"QH","buyerPersona":"CFO / CPO / Procurement Head"},{"id":"SHN-UAE-0184","name":"Mubadala Capital","aliases":["Mubadala Capital"],"domain":"mubadalacapital.ae","sector":"Investment","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://mubadalacapital.ae","monogram":"MC","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0186","name":"Shuaa Capital","aliases":["SHUAA","Shuaa Capital"],"domain":"shuaa.com","sector":"Investment","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://shuaa.com","monogram":"SC","buyerPersona":"CIO / Investment Director / IC Member"},{"id":"SHN-UAE-0187","name":"Chimera Investment","aliases":["Chimera","Chimera Investment"],"domain":"chimera.ae","sector":"Investment","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://chimera.ae","monogram":"CI","buyerPersona":"CIO / Investment Director / IC Member"},{"id":"SHN-UAE-0192","name":"ADNOC Offshore","aliases":["ADNOC Offshore"],"domain":"adnoc.ae","sector":"Energy","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://adnoc.ae","monogram":"AO","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0205","name":"Crescent Petroleum","aliases":["Crescent","Crescent Petroleum"],"domain":"crescentpetroleum.com","sector":"Energy","emirate":"Sharjah","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://crescentpetroleum.com","monogram":"CP","buyerPersona":"CFO / CPO / Procurement Head"},{"id":"SHN-UAE-0223","name":"MAG Lifestyle Development","aliases":["MAG","MAG Lifestyle Development"],"domain":"mag.global","sector":"Real Estate","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://mag.global","monogram":"ML","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0234","name":"Thumbay Group","aliases":["Thumbay","Thumbay Group"],"domain":"thumbay.com","sector":"Healthcare / Education","emirate":"Ajman","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://thumbay.com","monogram":"TG","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0253","name":"Emirates SkyCargo","aliases":["Emirates SkyCargo","SkyCargo"],"domain":"skycargo.com","sector":"Logistics / Aviation","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://skycargo.com","monogram":"ES","buyerPersona":"CFO / CPO / Procurement Head"},{"id":"SHN-UAE-0305","name":"EDGNEX Data Centers","aliases":["Damac Data Centres","EDGNEX Data Centers"],"domain":"edgnex.com","sector":"Data Centers","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://edgnex.com","monogram":"ED","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0312","name":"The National","aliases":["The National","The National News"],"domain":"thenationalnews.com","sector":"Media","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://thenationalnews.com","monogram":"NA","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-X0293","name":"Dubai Holding Real Estate","aliases":["Dubai Holding Real Estate","DHRE","Nakheel owner","Meraas owner","Dubai Properties owner"],"domain":"dubaiholdingrealestate.ae","sector":"Real Estate / Holding","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dubaiholdingrealestate.ae","monogram":"DE","buyerPersona":"CIO / Investment Director / IC Member"},{"id":"SHN-UAE-0117","name":"Dubai Municipality","aliases":["DM","Dubai Municipality","Municipality Dubai","ministry government authority"],"domain":"dm.gov.ae","sector":"Municipality / Smart City","emirate":"Dubai","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dm.gov.ae","monogram":"MU","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0032","name":"Abu Dhabi Commercial Bank","aliases":["ADCB","Abu Dhabi Commercial Bank","bank"],"domain":"adcb.com","sector":"Banking & Financial Services","emirate":"Abu Dhabi","type":"Listed company","logo":"https://www.google.com/s2/favicons?sz=128&domain=adcb.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"CB"},{"id":"SHN-UAE-0322","name":"TECOM Group","aliases":["DIC","DMC","Dubai Design District","Dubai Internet City","Dubai Media City","TECOM","TECOM Group","d3","Dubai Knowledge Park","Dubai International Academic City","DIAC","tecom group"],"domain":"tecomgroup.ae","sector":"Business Districts / Technology","emirate":"Dubai","type":"Listed company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://tecomgroup.ae","monogram":"TG","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0017","name":"TAQA","aliases":["Abu Dhabi National Energy Company","TAQA"],"domain":"taqa.com","sector":"Utilities & Energy","emirate":"Abu Dhabi","type":"Listed company","logo":"https://www.google.com/s2/favicons?sz=128&domain=taqa.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"TA"},{"id":"SHN-UAE-0020","name":"Emirates Global Aluminium","aliases":["EGA","Emirates Global Aluminium"],"domain":"ega.ae","sector":"Industrial","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain=ega.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"EG"},{"id":"SHN-UAE-0022","name":"Fertiglobe","aliases":["Ferti Globe","Fertiglobe"],"domain":"fertiglobe.com","sector":"Industrial Chemicals","emirate":"Abu Dhabi","type":"Listed company","logo":"https://www.google.com/s2/favicons?sz=128&domain=fertiglobe.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"FE"},{"id":"SHN-UAE-0044","name":"Abu Dhabi Investment Authority","aliases":["ADIA","Abu Dhabi Investment Authority"],"domain":"adia.ae","sector":"Investment & Holding","emirate":"Abu Dhabi","type":"Sovereign fund","logo":"https://www.google.com/s2/favicons?sz=128&domain=adia.ae","buyerPersona":"CIO / Investment Committee / Strategy Director","monogram":"IA"},{"id":"SHN-UAE-0060","name":"Ministry of Industry and Advanced Technology","aliases":["MOIAT","Ministry of Industry and Advanced Technology","MoIAT","ministry"],"domain":"moiat.gov.ae","sector":"Federal Government / Industry","emirate":"Federal","type":"Ministry","logo":"https://www.google.com/s2/favicons?sz=128&domain=moiat.gov.ae","buyerPersona":"COO / CIO / Operations Head","monogram":"MI"},{"id":"SHN-UAE-0170","name":"Orient Insurance","aliases":["Orient","Orient Insurance"],"domain":"orientinsurance.ae","sector":"Insurance","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://orientinsurance.ae","monogram":"OI","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0211","name":"Danube Properties","aliases":["Danube","Danube Properties"],"domain":"danubeproperties.com","sector":"Real Estate","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://danubeproperties.com","monogram":"DP","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0239","name":"University of Sharjah","aliases":["UOS","University of Sharjah"],"domain":"sharjah.ac.ae","sector":"Education","emirate":"Sharjah","type":"University","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://sharjah.ac.ae","monogram":"US","buyerPersona":"CHRO / People Head / L&D Head"},{"id":"SHN-UAE-0293","name":"STARZPLAY","aliases":["STARZPLAY","Starz Play"],"domain":"starzplay.com","sector":"Media / Streaming","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://starzplay.com","monogram":"ST","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0295","name":"Abu Dhabi Media","aliases":["ADM","Abu Dhabi Media","ministry government authority"],"domain":"admedia.ae","sector":"Media","emirate":"Abu Dhabi","type":"Government Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://admedia.ae","monogram":"ME","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-X0292","name":"Dubai Financial Market","aliases":["Dubai Financial Market","DFM"],"domain":"dfm.ae","sector":"Capital Markets / Exchange","emirate":"Dubai","type":"Listed market operator","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dfm.ae","monogram":"DM","buyerPersona":"CIO / Investment Director / IC Member"},{"id":"SHN-UAE-0070","name":"Roads and Transport Authority","aliases":["RTA","RTA Dubai","Roads and Transport Authority","ministry government authority"],"domain":"rta.ae","sector":"Transport & Government","emirate":"Dubai","type":"Government entity","logo":"https://www.google.com/s2/favicons?sz=128&domain=rta.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"RT"},{"id":"SHN-UAE-0063","name":"Ministry of Human Resources and Emiratisation","aliases":["MOHRE","Ministry of Human Resources and Emiratisation","MoHRE","ministry"],"domain":"mohre.gov.ae","sector":"Federal Government / Workforce","emirate":"Federal","type":"Ministry","logo":"https://www.google.com/s2/favicons?sz=128&domain=mohre.gov.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"MH"},{"id":"SHN-UAE-0023","name":"DP World","aliases":["DP World","DPWorld"],"domain":"dpworld.com","sector":"Logistics & Ports","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain=dpworld.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"DW"},{"id":"SHN-UAE-0028","name":"Dubai Airports","aliases":["DXB","Dubai Airports","Dubai International Airport"],"domain":"dubaiairports.ae","sector":"Aviation & Travel","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain=dubaiairports.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"AI"},{"id":"SHN-UAE-0126","name":"Knowledge and Human Development Authority","aliases":["KHDA","Knowledge and Human Development Authority","ministry government authority"],"domain":"khda.gov.ae","sector":"Education","emirate":"Dubai","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://khda.gov.ae","monogram":"KH","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0174","name":"SALAMA Islamic Arab Insurance","aliases":["SALAMA Islamic Arab Insurance","Salama"],"domain":"salama.ae","sector":"Insurance","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://salama.ae","monogram":"SI","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0238","name":"American University of Sharjah","aliases":["AUS","American University of Sharjah"],"domain":"aus.edu","sector":"Education","emirate":"Sharjah","type":"University","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://aus.edu","monogram":"AU","buyerPersona":"CHRO / People Head / L&D Head"},{"id":"SHN-UAE-0241","name":"Abu Dhabi University","aliases":["ADU","Abu Dhabi University"],"domain":"adu.ac.ae","sector":"Education","emirate":"Abu Dhabi","type":"University","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://adu.ac.ae","monogram":"UN","buyerPersona":"CHRO / People Head / L&D Head"},{"id":"SHN-UAE-0244","name":"University of Dubai","aliases":["UD","University of Dubai"],"domain":"ud.ac.ae","sector":"Education","emirate":"Dubai","type":"University","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://ud.ac.ae","monogram":"UN","buyerPersona":"CHRO / People Head / L&D Head"},{"id":"SHN-UAE-0255","name":"Dubai Taxi Company","aliases":["DTC","Dubai Taxi Company","ministry government authority"],"domain":"dtc.gov.ae","sector":"Mobility","emirate":"Dubai","type":"Government Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dtc.gov.ae","monogram":"TC","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0257","name":"Abu Dhabi Maritime","aliases":["AD Maritime","Abu Dhabi Maritime","ministry government authority"],"domain":"admaritime.ae","sector":"Maritime","emirate":"Abu Dhabi","type":"Government Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://admaritime.ae","monogram":"MA","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0313","name":"Gulf News","aliases":["Gulf News","GulfNews"],"domain":"gulfnews.com","sector":"Media","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://gulfnews.com","monogram":"GN","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0314","name":"Khaleej Times","aliases":["KT","Khaleej Times"],"domain":"khaleejtimes.com","sector":"Media","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://khaleejtimes.com","monogram":"KT","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0019","name":"Masdar","aliases":["Abu Dhabi Future Energy Company","Masdar","Masdar City","Masdar Free Zone"],"domain":"masdar.ae","sector":"Clean Energy","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain=masdar.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"MA"},{"id":"SHN-UAE-0029","name":"Abu Dhabi Airports","aliases":["Abu Dhabi Airports","Zayed International Airport"],"domain":"abudhabiairports.ae","sector":"Aviation & Travel","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain=abudhabiairports.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"AI"},{"id":"SHN-UAE-0053","name":"Burjeel Holdings","aliases":["Burjeel","Burjeel Holdings"],"domain":"burjeelholdings.com","sector":"Healthcare","emirate":"Abu Dhabi","type":"Listed company","logo":"https://www.google.com/s2/favicons?sz=128&domain=burjeelholdings.com","buyerPersona":"COO / CIO / Operations Head","monogram":"BH"},{"id":"SHN-UAE-0118","name":"Dubai Customs","aliases":["Customs Dubai","Dubai Customs","ministry government authority"],"domain":"dubaicustoms.gov.ae","sector":"Trade / Customs","emirate":"Dubai","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dubaicustoms.gov.ae","monogram":"CU","buyerPersona":"CIO / Digital Government Lead / CX Head"},{"id":"SHN-UAE-0121","name":"Dubai Chambers","aliases":["Dubai Chamber","Dubai Chambers","ministry government authority"],"domain":"dubaichambers.com","sector":"Economic Development","emirate":"Dubai","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dubaichambers.com","monogram":"CH","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0128","name":"Sharjah Electricity, Water and Gas Authority","aliases":["SEWA","Sharjah Electricity, Water and Gas Authority","ministry government authority"],"domain":"sewa.gov.ae","sector":"Utilities","emirate":"Sharjah","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://sewa.gov.ae","monogram":"SE","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0134","name":"Sharjah Research Technology and Innovation Park","aliases":["SRTIP","Sharjah Research Technology and Innovation Park"],"domain":"srtip.ae","sector":"Innovation / Free Zone","emirate":"Sharjah","type":"Free Zone","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://srtip.ae","monogram":"SR","buyerPersona":"CFO / CPO / Procurement Head"},{"id":"SHN-UAE-0135","name":"Dubai Culture","aliases":["Dubai Culture","Dubai Culture and Arts Authority","ministry government authority"],"domain":"dubaiculture.gov.ae","sector":"Culture / Government","emirate":"Dubai","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dubaiculture.gov.ae","monogram":"CU","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0149","name":"Abu Dhabi Global Market Registration Authority","aliases":["ADGM RA","ADGM Registration Authority","Abu Dhabi Global Market Registration Authority"],"domain":"adgm.com","sector":"Financial Free Zone","emirate":"Abu Dhabi","type":"Regulator","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://adgm.com","monogram":"GM","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0162","name":"Magnati","aliases":["Magnati","Magnati Payments"],"domain":"magnati.com","sector":"Payments","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://magnati.com","monogram":"MA","buyerPersona":"CFO / CPO / Procurement Head"},{"id":"SHN-UAE-0220","name":"Deyaar","aliases":["Deyaar","Deyaar Development"],"domain":"deyaar.ae","sector":"Real Estate","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://deyaar.ae","monogram":"DE","buyerPersona":"CFO / CPO / Procurement Head"},{"id":"SHN-UAE-0222","name":"Binghatti","aliases":["Binghatti","Binghatti Developers"],"domain":"binghatti.com","sector":"Real Estate","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://binghatti.com","monogram":"BI","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0242","name":"Canadian University Dubai","aliases":["CUD","Canadian University Dubai"],"domain":"cud.ac.ae","sector":"Education","emirate":"Dubai","type":"University","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://cud.ac.ae","monogram":"CU","buyerPersona":"CHRO / People Head / L&D Head"},{"id":"SHN-UAE-0243","name":"Heriot-Watt University Dubai","aliases":["Heriot Watt Dubai","Heriot-Watt University Dubai"],"domain":"hw.ac.uk","sector":"Education","emirate":"Dubai","type":"University","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://hw.ac.uk","monogram":"HW","buyerPersona":"CHRO / People Head / L&D Head"},{"id":"SHN-UAE-0252","name":"dnata","aliases":["Dnata","dnata"],"domain":"dnata.com","sector":"Aviation Services","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dnata.com","monogram":"DN","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0294","name":"OSN","aliases":["OSN","OSN UAE"],"domain":"osn.com","sector":"Media / Streaming","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://osn.com","monogram":"OS","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0296","name":"Dubai Media Incorporated","aliases":["DMI","Dubai Media Incorporated","ministry government authority"],"domain":"dmi.ae","sector":"Media","emirate":"Dubai","type":"Government Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dmi.ae","monogram":"MI","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-X0300","name":"Abu Dhabi Maritime Academy","aliases":["Abu Dhabi Maritime Academy","AD Maritime Academy"],"domain":"admaritimeacademy.com","sector":"Maritime Education / Training","emirate":"Abu Dhabi","type":"Education","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://admaritimeacademy.com","monogram":"AA","buyerPersona":"CIO / Digital Government Lead / CX Head"},{"id":"SHN-UAE-0172","name":"Abu Dhabi National Insurance Company","aliases":["ADNIC","Abu Dhabi National Insurance Company"],"domain":"adnic.ae","sector":"Insurance","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://adnic.ae","monogram":"NI","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0201","name":"Etihad Water and Electricity","aliases":["Etihad WE","Etihad Water and Electricity","FEWA","ministry government authority"],"domain":"etihadwe.ae","sector":"Utilities","emirate":"Northern Emirates","type":"Federal Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://etihadwe.ae","monogram":"EW","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0245","name":"Rochester Institute of Technology Dubai","aliases":["RIT Dubai","Rochester Institute of Technology Dubai"],"domain":"rit.edu/dubai","sector":"Education","emirate":"Dubai","type":"University","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://rit.edu/dubai","monogram":"RI","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0249","name":"Taaleem","aliases":["Taaleem","Taaleem Holdings"],"domain":"taaleem.ae","sector":"Education","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://taaleem.ae","monogram":"TA","buyerPersona":"CHRO / People Head / L&D Head"},{"id":"SHN-UAE-0250","name":"Alef Education","aliases":["Alef","Alef Education"],"domain":"alefeducation.com","sector":"Education / EdTech","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://alefeducation.com","monogram":"AE","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0259","name":"Shipa Delivery","aliases":["Shipa","Shipa Delivery"],"domain":"shipa.com","sector":"Logistics","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://shipa.com","monogram":"SD","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-X0296","name":"Middlesex University Dubai","aliases":["Middlesex University Dubai","MDX Dubai"],"domain":"mdx.ac.ae","sector":"Education / University","emirate":"Dubai","type":"University","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://mdx.ac.ae","monogram":"MD","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0119","name":"Abu Dhabi Customs","aliases":["AD Customs","Abu Dhabi Customs","ministry government authority"],"domain":"adcustoms.gov.ae","sector":"Trade / Customs","emirate":"Abu Dhabi","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://adcustoms.gov.ae","monogram":"CU","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0237","name":"New York University Abu Dhabi","aliases":["NYU Abu Dhabi","NYUAD","New York University Abu Dhabi"],"domain":"nyuad.nyu.edu","sector":"Education","emirate":"Abu Dhabi","type":"University","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://nyuad.nyu.edu","monogram":"NY","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0021","name":"Borouge","aliases":["Borouge","Borouge PLC"],"domain":"borouge.com","sector":"Industrial Chemicals","emirate":"Abu Dhabi","type":"Listed company","logo":"https://www.google.com/s2/favicons?sz=128&domain=borouge.com","buyerPersona":"COO / CIO / Operations Head","monogram":"BO"},{"id":"SHN-UAE-0091","name":"Talabat UAE","aliases":["Talabat","Talabat UAE"],"domain":"talabat.com","sector":"Food Delivery / Platform","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain=talabat.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"TA"},{"id":"SHN-UAE-0125","name":"Abu Dhabi Department of Education and Knowledge","aliases":["ADEK","Abu Dhabi Department of Education and Knowledge","ministry government authority"],"domain":"adek.gov.ae","sector":"Education","emirate":"Abu Dhabi","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://adek.gov.ae","monogram":"DE","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0161","name":"Network International","aliases":["Network","Network International"],"domain":"network.ae","sector":"Payments","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://network.ae","monogram":"NI","buyerPersona":"CIO / Investment Director / IC Member"},{"id":"SHN-UAE-0188","name":"Royal Group","aliases":["Royal Group","Royal Group UAE"],"domain":"royalgroupuae.com","sector":"Holding Company","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://royalgroupuae.com","monogram":"RG","buyerPersona":"CIO / Investment Director / IC Member"},{"id":"SHN-UAE-0213","name":"Bloom Holding","aliases":["Bloom","Bloom Holding"],"domain":"bloomholding.com","sector":"Real Estate","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://bloomholding.com","monogram":"BH","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0214","name":"Eagle Hills","aliases":["Eagle Hills","Eagle Hills Properties"],"domain":"eaglehills.com","sector":"Real Estate","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://eaglehills.com","monogram":"EH","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0024","name":"AD Ports Group","aliases":["AD Ports","AD Ports Group","ADPorts","AI customs","AI-powered IHQ","Abu Dhabi Ports","Big Bear","BigBear","BigBear AI","BigBear.ai","bigbear","big bear","customs AI","AI-powered maritime trade","Maqta BigBear","digital trade platform","AI ports partnership","Maqta Technologies","Maqta Technologies Group"],"domain":"adportsgroup.com","sector":"Logistics & Ports","emirate":"Abu Dhabi","type":"Listed company","logo":"https://www.google.com/s2/favicons?sz=128&domain=adportsgroup.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"AP"},{"id":"SHN-UAE-0038","name":"Emaar Properties","aliases":["Emaar","Emaar Properties"],"domain":"emaar.com","sector":"Real Estate","emirate":"Dubai","type":"Listed company","logo":"https://www.google.com/s2/favicons?sz=128&domain=emaar.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"EP"},{"id":"SHN-UAE-0122","name":"Dubai Land Department","aliases":["DLD","Dubai Land Department","ministry government authority"],"domain":"dubailand.gov.ae","sector":"Real Estate / Regulation","emirate":"Dubai","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dubailand.gov.ae","monogram":"LD","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0203","name":"Empower","aliases":["Emirates Central Cooling Systems","Empower"],"domain":"empower.ae","sector":"Utilities / District Cooling","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://empower.ae","monogram":"EM","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0215","name":"Arada","aliases":["Arada","Arada Developments"],"domain":"arada.com","sector":"Real Estate","emirate":"Sharjah","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://arada.com","monogram":"AR","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0247","name":"Sorbonne University Abu Dhabi","aliases":["Sorbonne Abu Dhabi","Sorbonne University Abu Dhabi"],"domain":"sorbonne.ae","sector":"Education","emirate":"Abu Dhabi","type":"University","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://sorbonne.ae","monogram":"SU","buyerPersona":"CHRO / People Head / L&D Head"},{"id":"SHN-UAE-0266","name":"Miral","aliases":["Miral","Miral Experiences","ministry government authority","Yas Island","Yas Island Abu Dhabi"],"domain":"miral.ae","sector":"Tourism / Leisure","emirate":"Abu Dhabi","type":"Government Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://miral.ae","monogram":"MI","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0297","name":"MBC Group","aliases":["MBC","MBC Group"],"domain":"mbc.net","sector":"Media","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://mbc.net","monogram":"MG","buyerPersona":"CIO / Digital Government Lead / CX Head"},{"id":"SHN-UAE-0078","name":"Khalifa University","aliases":["KU","Khalifa University"],"domain":"ku.ac.ae","sector":"Education & Research","emirate":"Abu Dhabi","type":"University","logo":"https://www.google.com/s2/favicons?sz=128&domain=ku.ac.ae","buyerPersona":"CIO / Chief AI Officer / Digital Lead","monogram":"KU"},{"id":"SHN-UAE-0027","name":"Etihad Airways","aliases":["Etihad","Etihad Airways"],"domain":"etihad.com","sector":"Aviation & Travel","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain=etihad.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"EA"},{"id":"SHN-UAE-0089","name":"Noon","aliases":["Noon","Noon UAE","noon.com"],"domain":"noon.com","sector":"E-commerce","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain=noon.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"NO"},{"id":"SHN-UAE-0120","name":"Abu Dhabi Department of Economic Development","aliases":["ADDED","Abu Dhabi Department of Economic Development","DED Abu Dhabi","ministry government authority"],"domain":"added.gov.ae","sector":"Economic Development","emirate":"Abu Dhabi","type":"Government Entity","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://added.gov.ae","monogram":"DE","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0221","name":"Omniyat","aliases":["Omniyat","Omniyat Properties"],"domain":"omniyat.com","sector":"Real Estate","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://omniyat.com","monogram":"OM","buyerPersona":"CFO / CPO / Procurement Head"},{"id":"SHN-UAE-0224","name":"RAK Properties","aliases":["RAK Properties","RAKP"],"domain":"rakproperties.ae","sector":"Real Estate","emirate":"Ras Al Khaimah","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://rakproperties.ae","monogram":"RP","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0251","name":"Aldar Education","aliases":["Aldar Academies","Aldar Education"],"domain":"aldareducation.com","sector":"Education","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://aldareducation.com","monogram":"AE","buyerPersona":"CHRO / People Head / L&D Head"},{"id":"SHN-UAE-0320","name":"ADNEC Group","aliases":["ADNEC","ADNEC Group","ministry government authority"],"domain":"adnecgroup.ae","sector":"Events / Tourism","emirate":"Abu Dhabi","type":"Government Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://adnecgroup.ae","monogram":"AG","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0139","name":"KEZAD Group","aliases":["KEZAD Group","KIZAD","Khalifa Economic Zones Abu Dhabi"],"domain":"kezadgroup.com","sector":"Industrial / Free Zone","emirate":"Abu Dhabi","type":"Free Zone","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://kezadgroup.com","monogram":"KG","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0260","name":"National Taxi","aliases":["National Taxi","National Taxi UAE"],"domain":"nationaltaxi.ae","sector":"Mobility","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://nationaltaxi.ae","monogram":"NT","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0284","name":"ASPIRE","aliases":["ASPIRE","Aspire UAE","ministry government authority"],"domain":"aspireuae.ae","sector":"Innovation / R&D","emirate":"Abu Dhabi","type":"Government Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://aspireuae.ae","monogram":"AS","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0298","name":"Anghami","aliases":["Anghami","Anghami UAE"],"domain":"anghami.com","sector":"Media / Platform","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://anghami.com","monogram":"AN","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0303","name":"Bayut","aliases":["Bayut","Bayut UAE"],"domain":"bayut.com","sector":"PropTech","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://bayut.com","monogram":"BA","buyerPersona":"CIO / Digital Government Lead / CX Head"},{"id":"SHN-UAE-0304","name":"Property Finder","aliases":["Property Finder","PropertyFinder"],"domain":"propertyfinder.ae","sector":"PropTech","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://propertyfinder.ae","monogram":"PF","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0041","name":"Nakheel","aliases":["Nakheel","Nakheel Properties"],"domain":"nakheel.com","sector":"Real Estate","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain=nakheel.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"NA"},{"id":"SHN-UAE-0039","name":"DAMAC Properties","aliases":["DAMAC","DAMAC Properties"],"domain":"damacproperties.com","sector":"Real Estate","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain=damacproperties.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"DP"},{"id":"SHN-UAE-0079","name":"United Arab Emirates University","aliases":["UAEU","United Arab Emirates University"],"domain":"uaeu.ac.ae","sector":"Education & Research","emirate":"Abu Dhabi","type":"University","logo":"https://www.google.com/s2/favicons?sz=128&domain=uaeu.ac.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"UA"},{"id":"SHN-UAE-0080","name":"Higher Colleges of Technology","aliases":["HCT","Higher Colleges of Technology"],"domain":"hct.ac.ae","sector":"Education & Workforce","emirate":"Federal","type":"University network","logo":"https://www.google.com/s2/favicons?sz=128&domain=hct.ac.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"HC"},{"id":"SHN-UAE-0219","name":"Union Properties","aliases":["UPP","Union Properties"],"domain":"up.ae","sector":"Real Estate","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://up.ae","monogram":"UP","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0268","name":"Abu Dhabi National Hotels","aliases":["ADNH","Abu Dhabi National Hotels"],"domain":"adnh.com","sector":"Hospitality","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://adnh.com","monogram":"NH","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0037","name":"Aldar Properties","aliases":["Aldar","Aldar Properties"],"domain":"aldar.com","sector":"Real Estate","emirate":"Abu Dhabi","type":"Listed company","logo":"https://www.google.com/s2/favicons?sz=128&domain=aldar.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"AP"},{"id":"SHN-UAE-0202","name":"Tabreed","aliases":["National Central Cooling Company","Tabreed"],"domain":"tabreed.ae","sector":"Utilities / District Cooling","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://tabreed.ae","monogram":"TA","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0212","name":"Azizi Developments","aliases":["Azizi","Azizi Developments"],"domain":"azizidevelopments.com","sector":"Real Estate","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://azizidevelopments.com","monogram":"AD","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0218","name":"Meraas","aliases":["Meraas","Meraas Holding"],"domain":"meraas.com","sector":"Real Estate / Leisure","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://meraas.com","monogram":"ME","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0261","name":"Jumeirah Group","aliases":["Jumeirah","Jumeirah Group"],"domain":"jumeirah.com","sector":"Hospitality","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://jumeirah.com","monogram":"JG","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0010","name":"EDGE Group","aliases":["EDGE","EDGE Group"],"domain":"edgegroup.ae","sector":"Advanced Technology & Defense","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain=edgegroup.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"EG"},{"id":"SHN-UAE-0090","name":"Careem","aliases":["Careem","Careem UAE"],"domain":"careem.com","sector":"Mobility / Platform","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain=careem.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"CA"},{"id":"SHN-UAE-0210","name":"Sobha Realty","aliases":["Sobha","Sobha Realty"],"domain":"sobha.com","sector":"Real Estate","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://sobha.com","monogram":"SR","buyerPersona":"CEO / Board Secretary / Strategy Head"},{"id":"SHN-UAE-0301","name":"Swvl","aliases":["Swvl","Swvl UAE"],"domain":"swvl.com","sector":"Mobility / Platform","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://swvl.com","monogram":"SW","buyerPersona":"CIO / Digital Government Lead / CX Head"},{"id":"SHN-UAE-0262","name":"Rotana","aliases":["Rotana","Rotana Hotels"],"domain":"rotana.com","sector":"Hospitality","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://rotana.com","monogram":"RO","buyerPersona":"COO / CIO / Operations Head"},{"id":"SHN-UAE-0263","name":"Emaar Hospitality","aliases":["Emaar Hospitality","Emaar Hotels"],"domain":"emaarhospitality.com","sector":"Hospitality","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://emaarhospitality.com","monogram":"EH","buyerPersona":"CFO / CPO / Procurement Head"},{"id":"SHN-UAE-0276","name":"Americana Restaurants","aliases":["Americana","Americana Restaurants"],"domain":"americanarestaurants.com","sector":"Food / Restaurants","emirate":"Sharjah","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://americanarestaurants.com","monogram":"AR","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0148","name":"Creative Zone","aliases":["Creative Zone","CreativeZone"],"domain":"creativezone.ae","sector":"Business Setup","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://creativezone.ae","monogram":"CZ","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0195","name":"Emirates Steel Arkan","aliases":["Arkan","Emirates Steel","Emirates Steel Arkan"],"domain":"emiratessteelarkan.com","sector":"Industrial","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://emiratessteelarkan.com","monogram":"ES","buyerPersona":"CIO / Investment Director / IC Member"},{"id":"SHN-UAE-0196","name":"Ducab","aliases":["Dubai Cable","Ducab"],"domain":"ducab.com","sector":"Industrial","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://ducab.com","monogram":"DU","buyerPersona":"CHRO / People Head / L&D Head"},{"id":"SHN-UAE-0278","name":"IFFCO","aliases":["IFFCO","IFFCO Group"],"domain":"iffco.com","sector":"Food / Manufacturing","emirate":"Sharjah","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://iffco.com","monogram":"IF","buyerPersona":"CFO / CPO / Procurement Head"},{"id":"SHN-UAE-0277","name":"Agthia Group","aliases":["Agthia","Agthia Group"],"domain":"agthia.com","sector":"Food / Manufacturing","emirate":"Abu Dhabi","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://agthia.com","monogram":"AG","buyerPersona":"CIO / COO / Chief Digital Officer"},{"id":"SHN-UAE-0280","name":"The ENTERTAINER","aliases":["Entertainer","The ENTERTAINER"],"domain":"theentertainerme.com","sector":"Consumer Platform","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://theentertainerme.com","monogram":"EN","buyerPersona":"CIO / Digital Government Lead / CX Head"},{"id":"SHN-UAE-0302","name":"Dubizzle Group","aliases":["Bayut Dubizzle","Dubizzle","Dubizzle Group"],"domain":"dubizzlegroup.com","sector":"Marketplace","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://dubizzlegroup.com","monogram":"DG","buyerPersona":"CIO / Digital Government Lead / CX Head"},{"id":"SHN-UAE-0083","name":"Hub71","aliases":["Hub 71","Hub71"],"domain":"hub71.com","sector":"Startup Ecosystem","emirate":"Abu Dhabi","type":"Ecosystem","logo":"https://www.google.com/s2/favicons?sz=128&domain=hub71.com","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"HU"},{"id":"SHN-UAE-0051","name":"DMCC","aliases":["DMCC","Dubai Multi Commodities Centre"],"domain":"dmcc.ae","sector":"Free Zone / Trade","emirate":"Dubai","type":"Free zone","logo":"https://www.google.com/s2/favicons?sz=128&domain=dmcc.ae","buyerPersona":"COO / CIO / Chief Digital Officer","monogram":"DM"},{"id":"SHN-UAE-0906","name":"Kerzner International","aliases":["Atlantis","Atlantis Dubai","Atlantis The Palm","Atlantis The Royal","Atlantis owner","Kerzner","Kerzner International","One&Only"],"domain":"kerzner.com","sector":"Hospitality / Resort Operator","emirate":"Dubai","type":"Company","logo":"https://www.google.com/s2/favicons?sz=128&domain_url=https://kerzner.com","monogram":"KI","buyerPersona":"CIO / COO / Operations Head"}];   // registry only — every score is computed from live evidence
@@ -435,6 +496,7 @@
     let LIVE_ENTITIES = [];
     let LIVE_SIGNALS_FEED = [];
     let lastLiveSyncAt = null;
+    let lastSyncMode = 'INIT';
 
     const entitiesData = () => LIVE_ENTITIES.length ? LIVE_ENTITIES : ENTITIES;
     const signalsData = () => LIVE_SIGNALS_FEED.length ? LIVE_SIGNALS_FEED : LIVE_SIGNALS;
@@ -473,11 +535,72 @@
       const t = setTimeout(() => controller.abort(), timeoutMs);
       try {
         const res = await fetch(url, { signal: controller.signal, headers: { 'Accept': 'application/json' } });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+          const err = new Error(`HTTP ${res.status}`);
+          err.status = res.status;
+          throw err;
+        }
         return await res.json();
       } finally {
         clearTimeout(t);
       }
+    }
+
+    const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    function isCoolingDown(sourceKey) {
+      return Date.now() < (API_STATE[sourceKey]?.cooldownUntil || 0);
+    }
+
+    function setCooldown(sourceKey, ms, reason) {
+      if (!API_STATE[sourceKey]) return;
+      API_STATE[sourceKey].cooldownUntil = Date.now() + ms;
+      API_STATE[sourceKey].lastError = reason || '';
+      renderDataStatus();
+    }
+
+    function isApiLimited() {
+      return Object.keys(API_STATE).some(k => isCoolingDown(k));
+    }
+
+    function getDataStatusLabel() {
+      if (lastSyncMode === 'ARCHIVE') return 'FALLBACK';
+      if (isApiLimited()) return 'LIMITED';
+      if (lastSyncMode === 'LIVE+ARCHIVE') return 'LIMITED';
+      if (lastSyncMode === 'LIVE' && lastLiveSyncAt) return 'LIVE';
+      return 'LIMITED';
+    }
+
+    function renderDataStatus() {
+      const statusEl = el('dataStatus');
+      if (!statusEl) return;
+      const label = getDataStatusLabel();
+      statusEl.textContent = label;
+      statusEl.classList.remove('live', 'limited', 'fallback');
+      if (label === 'LIVE') statusEl.classList.add('live');
+      else if (label === 'FALLBACK') statusEl.classList.add('fallback');
+      else statusEl.classList.add('limited');
+    }
+
+    async function fetchWithRetry(url, sourceKey, options = {}) {
+      const maxAttempts = options.maxAttempts || 2;
+      const backoffMs = options.backoffMs || 1200;
+      let lastErr = null;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          return await fetchJson(url, options.timeoutMs || 22000);
+        } catch (err) {
+          lastErr = err;
+          const status = err && err.status;
+          if (status === 429) {
+            setCooldown(sourceKey, options.cooldownMs || 10 * 60 * 1000, 'rate-limit');
+            break;
+          }
+          if (status === 422) break;
+          if (attempt < maxAttempts) await wait(backoffMs * attempt);
+        }
+      }
+      throw lastErr || new Error('Request failed');
     }
 
     function inferSector(name, typeLabel) {
@@ -513,6 +636,94 @@
     }
 
     let LIVE_ARTICLES = [];
+
+    const NEWS_CONFIG = {
+      gnews: {
+        keyStorage: 'shaheen.gnews.key',
+        queryStorage: 'shaheen.gnews.query',
+        defaultQuery: 'UAE Dubai Abu Dhabi AI artificial intelligence machine learning agentic',
+        endpoint: 'https://gnews.io/api/v4/search',
+        maxPerQuery: 10,
+        queryCount: 1,
+        cooldownMs: 12 * 60 * 1000,
+      },
+      newsdata: {
+        keyStorage: 'shaheen.newsdata.key',
+        endpoint: 'https://newsdata.io/api/1/news',
+        maxPerPull: 10,
+        cooldownMs: 12 * 60 * 1000,
+      },
+      archiveFallbackStorage: 'shaheen.archive.fallback',
+      lookbackDays: 45,
+      mergedCap: 300,
+      refreshIntervalMs: 8 * 60 * 1000,
+    };
+
+    const API_STATE = {
+      gnews: { cooldownUntil: 0, lastError: '' },
+      newsdata: { cooldownUntil: 0, lastError: '' },
+      gdelt: { cooldownUntil: 0, lastError: '' },
+      rss: { cooldownUntil: 0, lastError: '' },
+    };
+
+    function getStoredValue(key) {
+      try {
+        return localStorage.getItem(key) || '';
+      } catch {
+        return '';
+      }
+    }
+
+    function setStoredValue(key, value) {
+      try {
+        if (!value) localStorage.removeItem(key);
+        else localStorage.setItem(key, value);
+      } catch {
+        // Ignore storage errors (private mode / blocked storage)
+      }
+    }
+
+    function getGNewsKey() {
+      const urlKey = new URLSearchParams(location.search).get('gnews');
+      return (urlKey || getStoredValue(NEWS_CONFIG.gnews.keyStorage) || '').trim();
+    }
+
+    function getGNewsQuery() {
+      return (getStoredValue(NEWS_CONFIG.gnews.queryStorage) || NEWS_CONFIG.gnews.defaultQuery).trim();
+    }
+
+    function getNewsDataKey() {
+      return (getStoredValue(NEWS_CONFIG.newsdata.keyStorage) || '').trim();
+    }
+
+    function useArchiveFallback() {
+      return getStoredValue(NEWS_CONFIG.archiveFallbackStorage) === '1';
+    }
+
+    function cleanQueryForApi(raw) {
+      return String(raw || '')
+        .replace(/[()]/g, ' ')
+        .replace(/\bAND\b|\bOR\b|\bNOT\b/gi, ' ')
+        .replace(/["']/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 180);
+    }
+
+    function buildGNewsQueries() {
+      const userQuery = cleanQueryForApi(getGNewsQuery());
+      const broadQuery = 'UAE Dubai Abu Dhabi AI artificial intelligence machine learning agentic government bank telecom energy healthcare education logistics';
+      const targetQuery = 'ADNOC DEWA Emirates NBD Dubai Holding MBZUAI Digital Dubai AD Ports DP World Abu Dhabi Digital Authority';
+      return [...new Set([userQuery, broadQuery, targetQuery].filter(Boolean))].slice(0, NEWS_CONFIG.gnews.queryCount);
+    }
+
+    function articleText(title, description) {
+      return [title || '', description || ''].join(' ').trim();
+    }
+
+    function seemsUaeRelevant(text) {
+      return /\b(uae|united arab emirates|ab[\s-]?dhabi|dubai|sharjah|ajman|fujairah|ras[\s-]?al[\s-]?khaimah|umm[\s-]?al[\s-]?quwain)\b/i.test(String(text || ''));
+    }
 
     // ═══════════════════ EVIDENCE SCORING ENGINE ═══════════════════
     // Scores are computed from the articles matched to a company.
@@ -763,13 +974,18 @@
     let SECTOR_PRESSURE = {};
     let SCORED = {};          // entity id -> scorecard, rebuilt on every refresh
 
-    // Rebuild every score from the live article set. Called after each fetch.
-    function rescoreFromLiveArticles(liveArticles) {
+    // Rebuild every score from live articles, optionally with archive fallback.
+    function rescoreFromLiveArticles(liveArticles, options = {}) {
+      const includeArchive = !!options.includeArchive;
       const now = new Date();
-      // ARCHIVE + LIVE. The archive is always there; live adds to it.
+      // In strict live mode, only live APIs influence scoring.
+      // Archive is added only when fallback mode is enabled.
       const seen = new Set();
       const all = [];
-      for (const a of [...(liveArticles || []), ...archiveArticles()]) {
+      const inputArticles = includeArchive
+        ? [...(liveArticles || []), ...archiveArticles()]
+        : [...(liveArticles || [])];
+      for (const a of inputArticles) {
         const k = normStr(a.title).slice(0, 90);
         if (!a.isAI || seen.has(k)) continue;
         seen.add(k); all.push(a);
@@ -802,7 +1018,7 @@
       SCORED.__stats = {
         articles: all.length,
         live: (liveArticles || []).length,
-        archive: archiveArticles().length,
+        archive: includeArchive ? archiveArticles().length : 0,
         evidenced: ENTITIES.filter(e => SCORED[e.id] && SCORED[e.id].evidenceCount > 0).length,
       };
       return SCORED;
@@ -938,58 +1154,259 @@
     }
 
     async function fetchLiveSignalsFromGdelt() {
+      if (isCoolingDown('gdelt')) return [];
       const query = '(United Arab Emirates) AND (AI OR "artificial intelligence" OR agentic)';
-      const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&maxrecords=35&format=json&sort=DateDesc`;
-      const data = await fetchJson(url, 22000);
+      const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&maxrecords=120&format=json&sort=DateDesc`;
+      let data;
+      try {
+        data = await fetchWithRetry(url, 'gdelt', { maxAttempts: 2, backoffMs: 1000, timeoutMs: 22000, cooldownMs: 8 * 60 * 1000 });
+      } catch (err) {
+        if (err && err.status === 429) setCooldown('gdelt', 8 * 60 * 1000, 'rate-limit');
+        return [];
+      }
       const arts = data?.articles || [];
       return arts.map(a => {
         const title = a?.title || '';
+        const description = a?.seendate || '';
         const url = a?.url || '';
-        const cls = classifyArticle(title);
-        const ents = matchArticleToEntities(title);
+        const text = articleText(title, description);
+        const cls = classifyArticle(text);
+        const ents = matchArticleToEntities(text);
         const dateObj = a?.seendate ? new Date(String(a.seendate).replace(
           /^(\d{4})(\d{2})(\d{2})T?(\d{2})?(\d{2})?(\d{2})?.*$/, '$1-$2-$3T$4:$5:$6Z')) : new Date();
         return {
+          provider: 'gdelt',
           title, url, dateObj: isNaN(dateObj) ? new Date() : dateObj,
           date: formatDateIso(isNaN(dateObj) ? new Date() : dateObj),
           source: a?.domain || 'GDELT', tier: sourceTier(a?.domain),
+          description,
           isAI: cls.isAI, classes: cls.classes, entities: ents,
         };
       });
     }
 
     async function fetchLiveSignalsFromRss() {
-      const rssUrl = 'https://news.google.com/rss/search?q=UAE+AI+OR+agentic+AI&hl=en-AE&gl=AE&ceid=AE:en';
-      const url = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=30`;
-      const data = await fetchJson(url, 22000);
+      if (isCoolingDown('rss')) return [];
+      const rssUrl = 'https://news.google.com/rss/search?q=UAE+Dubai+Abu+Dhabi+AI+artificial+intelligence+machine+learning+agentic&hl=en-AE&gl=AE&ceid=AE:en';
+      const url = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=120`;
+      let data;
+      try {
+        data = await fetchWithRetry(url, 'rss', { maxAttempts: 2, backoffMs: 1000, timeoutMs: 22000, cooldownMs: 8 * 60 * 1000 });
+      } catch (err) {
+        if (err && err.status === 429) setCooldown('rss', 8 * 60 * 1000, 'rate-limit');
+        return [];
+      }
       const items = data?.items || [];
       return items.map(it => {
         const title = it?.title || '';
+        const description = it?.description || it?.content || '';
         const url = it?.link || '';
-        const cls = classifyArticle(title);
-        const ents = matchArticleToEntities(title);
+        const text = articleText(title, description);
+        const cls = classifyArticle(text);
+        const ents = matchArticleToEntities(text);
         const dateObj = it?.pubDate ? new Date(it.pubDate) : new Date();
-        const src = (it?.author || data?.feed?.title || 'Google News');
+        const src = hostFromUrl(url) || it?.author || data?.feed?.title || 'Google News';
         return {
+          provider: 'google-rss',
           title, url, dateObj: isNaN(dateObj) ? new Date() : dateObj,
           date: formatDateIso(isNaN(dateObj) ? new Date() : dateObj),
           source: src, tier: sourceTier(url || src),
+          description,
           isAI: cls.isAI, classes: cls.classes, entities: ents,
         };
       });
     }
 
+    async function fetchLiveSignalsFromGNews() {
+      const apikey = getGNewsKey();
+      if (!apikey) return [];
+      if (isCoolingDown('gnews')) return [];
+      const fromDate = new Date(Date.now() - NEWS_CONFIG.lookbackDays * 86400000).toISOString();
+      const queries = buildGNewsQueries().length ? buildGNewsQueries() : [NEWS_CONFIG.gnews.defaultQuery];
+      const pulls = await Promise.allSettled(queries.map(async (q) => {
+        const makeUrl = query => {
+          const params = new URLSearchParams({
+            q: query,
+            lang: 'en',
+            country: 'ae',
+            max: String(NEWS_CONFIG.gnews.maxPerQuery),
+            sortby: 'publishedAt',
+            from: fromDate,
+            apikey,
+          });
+          return `${NEWS_CONFIG.gnews.endpoint}?${params.toString()}`;
+        };
+
+        try {
+          const data = await fetchWithRetry(makeUrl(q), 'gnews', {
+            maxAttempts: 1,
+            backoffMs: 1400,
+            timeoutMs: 22000,
+            cooldownMs: NEWS_CONFIG.gnews.cooldownMs,
+          });
+          return data?.articles || [];
+        } catch (err) {
+          if (err && err.status === 422) {
+            setCooldown('gnews', NEWS_CONFIG.gnews.cooldownMs, 'unprocessable-query');
+          }
+          if (err && err.status === 429) setCooldown('gnews', NEWS_CONFIG.gnews.cooldownMs, 'rate-limit');
+          return [];
+        }
+      }));
+
+      const articles = [];
+      pulls.forEach((p) => {
+        if (p.status === 'fulfilled' && Array.isArray(p.value)) articles.push(...p.value);
+      });
+
+      return articles.map(a => {
+        const title = a?.title || '';
+        const description = a?.description || a?.content || '';
+        const articleUrl = a?.url || '';
+        const text = articleText(title, description);
+        const cls = classifyArticle(text);
+        const ents = matchArticleToEntities(text);
+        const dateObj = a?.publishedAt ? new Date(a.publishedAt) : new Date();
+        const source = a?.source?.name || hostFromUrl(articleUrl) || 'GNews';
+        return {
+          provider: 'gnews',
+          title,
+          url: articleUrl,
+          dateObj: isNaN(dateObj) ? new Date() : dateObj,
+          date: formatDateIso(isNaN(dateObj) ? new Date() : dateObj),
+          source,
+          tier: sourceTier(source),
+          description,
+          isAI: cls.isAI,
+          classes: cls.classes,
+          entities: ents,
+        };
+      });
+    }
+
+    async function fetchLiveSignalsFromNewsData() {
+      const apikey = getNewsDataKey();
+      if (!apikey) return [];
+      if (isCoolingDown('newsdata')) return [];
+      const fromDate = formatDateIso(new Date(Date.now() - NEWS_CONFIG.lookbackDays * 86400000));
+      const queries = buildGNewsQueries();
+      const pulls = await Promise.allSettled(queries.map(async (q) => {
+        const makeUrl = query => {
+          const params = new URLSearchParams({
+            apikey,
+            q: query,
+            country: 'ae',
+            language: 'en',
+            from_date: fromDate,
+            size: String(NEWS_CONFIG.newsdata.maxPerPull),
+          });
+          return `${NEWS_CONFIG.newsdata.endpoint}?${params.toString()}`;
+        };
+
+        try {
+          const data = await fetchWithRetry(makeUrl(q), 'newsdata', {
+            maxAttempts: 1,
+            backoffMs: 1400,
+            timeoutMs: 22000,
+            cooldownMs: NEWS_CONFIG.newsdata.cooldownMs,
+          });
+          return data?.results || [];
+        } catch (err) {
+          if (err && err.status === 422) {
+            setCooldown('newsdata', NEWS_CONFIG.newsdata.cooldownMs, 'unprocessable-query');
+          }
+          if (err && err.status === 429) setCooldown('newsdata', NEWS_CONFIG.newsdata.cooldownMs, 'rate-limit');
+          return [];
+        }
+      }));
+
+      const articles = [];
+      pulls.forEach((p) => {
+        if (p.status === 'fulfilled' && Array.isArray(p.value)) articles.push(...p.value);
+      });
+
+      return articles.map(a => {
+        const title = a?.title || '';
+        const description = a?.description || a?.content || '';
+        const articleUrl = a?.link || '';
+        const text = articleText(title, description);
+        const cls = classifyArticle(text);
+        const ents = matchArticleToEntities(text);
+        const dateObj = a?.pubDate ? new Date(a.pubDate) : new Date();
+        const source = a?.source_id || hostFromUrl(articleUrl) || 'NewsData';
+        return {
+          provider: 'newsdata',
+          title,
+          url: articleUrl,
+          dateObj: isNaN(dateObj) ? new Date() : dateObj,
+          date: formatDateIso(isNaN(dateObj) ? new Date() : dateObj),
+          source,
+          tier: sourceTier(source),
+          description,
+          isAI: cls.isAI,
+          classes: cls.classes,
+          entities: ents,
+        };
+      });
+    }
+
     async function fetchLiveSignals() {
-      const results = await Promise.allSettled([fetchLiveSignalsFromGdelt(), fetchLiveSignalsFromRss()]);
+      const results = await Promise.allSettled([
+        fetchLiveSignalsFromGNews(),
+        fetchLiveSignalsFromNewsData(),
+        fetchLiveSignalsFromGdelt(),
+        fetchLiveSignalsFromRss(),
+      ]);
       const merged = [];
       results.forEach(r => { if (r.status === 'fulfilled') merged.push(...r.value); });
       const seen = new Set();
       const cutoff = Date.now() - 45 * 86400000;      // 45-day window
       return merged.filter(a => {
-        const key = normStr(a.title).slice(0, 90);
+        const qualityText = articleText(a.title, a.description || '');
+        const key = [normStr(a.title).slice(0, 90), hostFromUrl(a.url)].join('|');
+        const hasEntityHit = Array.isArray(a.entities) && a.entities.length > 0;
         if (!a.url || seen.has(key) || a.dateObj.getTime() < cutoff) return false;
+        if (!a.isAI) return false;
+        if (!hasEntityHit && !seemsUaeRelevant(qualityText)) return false;
         seen.add(key); return true;
-      }).sort((x, y) => y.dateObj - x.dateObj).slice(0, 150);
+      }).sort((x, y) => y.dateObj - x.dateObj).slice(0, NEWS_CONFIG.mergedCap);
+    }
+
+    function openSettingsModal() {
+      el('gnewsKeyInput').value = getStoredValue(NEWS_CONFIG.gnews.keyStorage);
+      el('newsDataKeyInput').value = getStoredValue(NEWS_CONFIG.newsdata.keyStorage);
+      el('gnewsQueryInput').value = getGNewsQuery();
+      el('archiveFallbackToggle').checked = useArchiveFallback();
+      el('settingsModal').classList.add('open');
+    }
+
+    function closeSettingsModal() {
+      el('settingsModal').classList.remove('open');
+    }
+
+    function saveSettingsFromModal() {
+      const key = (el('gnewsKeyInput').value || '').trim();
+      const newsDataKey = (el('newsDataKeyInput').value || '').trim();
+      const query = (el('gnewsQueryInput').value || '').trim();
+      const allowArchiveFallback = !!el('archiveFallbackToggle').checked;
+      setStoredValue(NEWS_CONFIG.gnews.keyStorage, key);
+      setStoredValue(NEWS_CONFIG.newsdata.keyStorage, newsDataKey);
+      setStoredValue(NEWS_CONFIG.gnews.queryStorage, query || NEWS_CONFIG.gnews.defaultQuery);
+      setStoredValue(NEWS_CONFIG.archiveFallbackStorage, allowArchiveFallback ? '1' : '0');
+      closeSettingsModal();
+      showToast('Settings saved. Click Refresh Signals.');
+    }
+
+    function clearGNewsSettings() {
+      el('gnewsKeyInput').value = '';
+      el('newsDataKeyInput').value = '';
+      setStoredValue(NEWS_CONFIG.gnews.keyStorage, '');
+      setStoredValue(NEWS_CONFIG.newsdata.keyStorage, '');
+      showToast('Live API keys cleared.');
+    }
+
+    function configureNewsSources() {
+      openSettingsModal();
     }
 
 
@@ -998,7 +1415,7 @@
     // Score from the archive the moment the page opens. If every network call
     // fails, this is what you still see — a full board, from real sources.
     function bootFromArchive() {
-      rescoreFromLiveArticles([]);
+      rescoreFromLiveArticles([], { includeArchive: true });
       LIVE_ENTITIES = ENTITIES.map(projectEntity);
       LIVE_SIGNALS_FEED = archiveArticles().slice(0, 120).map(a => {
         const ent = a.entities[0];
@@ -1018,6 +1435,7 @@
     async function refreshLiveData(manual = false) {
       if (manual) showToast('Pulling live sources and rescoring...');
       const [entitiesResult, signalsResult] = await Promise.allSettled([fetchLiveEntities(), fetchLiveSignals()]);
+      const includeArchive = useArchiveFallback();
 
       // Newly discovered companies join the registry BEFORE we build the alias index.
       if (entitiesResult.status === 'fulfilled' && entitiesResult.value.length) {
@@ -1033,11 +1451,11 @@
       LIVE_ARTICLES = articles;
 
       // ── every score in the product is (re)computed here, from these articles ──
-      rescoreFromLiveArticles(articles);
+      rescoreFromLiveArticles(articles, { includeArchive });
       LIVE_ENTITIES = ENTITIES.map(projectEntity);
 
       // The signal rail: real impact, real matched company, real link.
-      LIVE_SIGNALS_FEED = articles.filter(a => a.isAI).map(a => {
+      const liveFeed = articles.filter(a => a.isAI).map(a => {
         const ent = a.entities[0];
         const sc = ent ? SCORED[ent.id] : null;
         const row = sc && sc.rows.find(r => r.a.url === a.url);
@@ -1054,14 +1472,54 @@
         };
       });
 
+      // Keep a large, useful feed: fresh live items first, then archive context.
+      const archiveFeed = archiveArticles().slice(0, 240).map(a => {
+        const ent = a.entities[0];
+        const sc = ent ? SCORED[ent.id] : null;
+        const row = sc && sc.rows.find(r => r.a.url === a.url);
+        return {
+          date: a.date,
+          time: a.date + ' · ' + a.source,
+          entity: ent ? ent.name : 'Market signal',
+          type: a.classes.join(' · '),
+          impact: row ? `Adoption ${row.impactAdoption >= 0 ? '+' : ''}${row.impactAdoption} / Intent ${row.impactIntent >= 0 ? '+' : ''}${row.impactIntent}` : 'Market context',
+          product: ent && sc ? sc.bestProduct : '—',
+          confidence: a.archived ? 'Archive' : 'Medium',
+          text: a.title,
+          source: a.source,
+          title: a.title,
+          sourceUrl: a.url,
+        };
+      });
+
+      const seenSignalUrls = new Set();
+      LIVE_SIGNALS_FEED = [];
+      const combinedFeed = includeArchive ? [...liveFeed, ...archiveFeed] : liveFeed;
+      for (const item of combinedFeed) {
+        const key = (item.sourceUrl || normStr(item.title)).toLowerCase();
+        if (!key || seenSignalUrls.has(key)) continue;
+        seenSignalUrls.add(key);
+        LIVE_SIGNALS_FEED.push(item);
+        if (LIVE_SIGNALS_FEED.length >= NEWS_CONFIG.mergedCap) break;
+      }
+
       lastLiveSyncAt = new Date();
-      bootFromArchive();
+      lastSyncMode = includeArchive ? 'LIVE+ARCHIVE' : 'LIVE';
+      if (!LIVE_SIGNALS_FEED.length) {
+        if (includeArchive) {
+          // Hard fallback when all live sources fail or return empty.
+          bootFromArchive();
+          lastSyncMode = 'ARCHIVE';
+        }
+      }
       renderFilters(); renderSignals(); renderLeaderboard(); setTime();
 
       if (manual) {
         const matched = ENTITIES.filter(e => SCORED[e.id] && SCORED[e.id].evidenceCount > 0).length;
-        showToast(`Live sync: ${articles.length} articles, ${matched} accounts scored from evidence`);
+        const feedMode = useArchiveFallback() ? 'live+archive' : 'live-only';
+        showToast(`Sync: ${articles.length} live articles, ${matched} accounts scored (${feedMode})`);
       }
+      renderDataStatus();
     }
 
 
@@ -1187,7 +1645,14 @@
     }
     function setTime() {
       const pill = el('liveTime'); if (!pill) return;
-      pill.textContent = 'LIVE';
+      if (!lastLiveSyncAt) {
+        pill.textContent = 'LIVE · connecting';
+        renderDataStatus();
+        return;
+      }
+      const hhmm = new Intl.DateTimeFormat('en-GB', { hour:'2-digit', minute:'2-digit', timeZone:'Asia/Dubai' }).format(lastLiveSyncAt);
+      pill.textContent = `${lastSyncMode} · ${hhmm} GST`;
+      renderDataStatus();
     }
     function openEntity(id, tab='overview') {
       activeEntity = findEntityById(id);
@@ -1342,7 +1807,12 @@ Next steps:
     el('closeModal').addEventListener('click', closeModal);
     el('modalBackdrop').addEventListener('click', closeModal);
     el('refreshSignals').addEventListener('click', async ()=>{ await refreshLiveData(true); });
-    el('settingsBtn').addEventListener('click', ()=>showToast('Settings placeholder: data sources, scoring weights, CRM sync'));
+    el('settingsBtn').addEventListener('click', configureNewsSources);
+    el('closeSettingsModal').addEventListener('click', closeSettingsModal);
+    el('settingsModalBackdrop').addEventListener('click', closeSettingsModal);
+    el('cancelSettingsBtn').addEventListener('click', closeSettingsModal);
+    el('saveSettingsBtn').addEventListener('click', saveSettingsFromModal);
+    el('clearGnewsBtn').addEventListener('click', clearGNewsSettings);
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); if (e.key === '/' && document.activeElement !== el('searchInput')) { e.preventDefault(); el('searchInput').focus(); } });
 
     async function initializeDashboard() {
@@ -1350,6 +1820,7 @@ Next steps:
       renderSignals();
       renderLeaderboard();
       setTime();
+      renderDataStatus();
       try {
         await refreshLiveData(false);
       } catch {
@@ -1357,7 +1828,7 @@ Next steps:
         renderLeaderboard();
       }
       setInterval(setTime, 30000);
-      setInterval(() => { refreshLiveData(false); }, 15 * 60 * 1000);
+      setInterval(() => { refreshLiveData(false); }, NEWS_CONFIG.refreshIntervalMs);
     }
 
     initializeDashboard();
