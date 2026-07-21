@@ -13,7 +13,10 @@ The dashboard organizes companies, government entities, authorities, free zones,
 - **Opportunity Leaderboard** — ranks prospects using adoption, intent, and product-fit scores
 - **Advanced Search and Filters** — filter by emirate, sector, entity type, product, and score range
 - **KPI Overview** — displays market size, high-priority leads, product fit, and active signals
-- **Live Signal Feed** — presents partnership updates, market activity, and relevant opportunities
+- **Live Signal Feed** — pulls and merges real news signals from free external sources
+- **Live Data Status Chip** — clearly shows feed state as `LIVE`, `LIMITED`, or `FALLBACK`
+- **In-Page Settings Modal** — configure API keys and query directly from the dashboard (no browser prompts)
+- **Real-Only / Fallback Control** — choose strict live-only mode or allow archive fallback for higher continuity
 - **Prospect Profiles** — provides detailed entity information, product-fit insights, and suggested outreach messages
 - **Export Tools** — exports filtered results, prospect profiles, and sales-ready metrics
 - **Product Radar Chart** — visualizes adoption and product-fit performance across different solutions
@@ -44,6 +47,18 @@ No installation is required.
 
 3. Open `index.html` in your browser.
 
+### Configure Live News (Recommended)
+
+1. Click **Settings** in the top-right of the dashboard.
+2. Add a **GNews API key** (free tier).
+3. Optionally add a **NewsData.io API key** for broader coverage.
+4. Set your preferred query (example: `UAE AI OR artificial intelligence`).
+5. Choose whether to enable archive fallback when live APIs are limited.
+
+Notes:
+- API keys are stored locally in your browser (`localStorage`) and are not sent to a backend by this project.
+- Free API tiers may rate-limit requests, which can temporarily show status as `LIMITED`.
+
 ### Option 2: Use the Live Version
 
 Access the deployed project through GitHub Pages:
@@ -57,6 +72,21 @@ shaheen-ai-radar/
 ├── index.html
 └── README.md
 ```
+
+## Live Data Behavior
+
+- `LIVE`: External live sources are responding and current signals are being refreshed.
+- `LIMITED`: One or more live providers are temporarily constrained (for example rate limits or query rejection).
+- `FALLBACK`: Live sources are unavailable and archive fallback is being used (if enabled).
+
+This status appears in the header so users can quickly understand feed quality and freshness.
+
+## Latest Website Updates
+
+- Replaced prompt-based settings flow with a dedicated in-page settings modal.
+- Added optional multi-source news ingestion to improve resilience.
+- Added query cleanup and request hardening for free-tier API reliability.
+- Added visible live status labeling (`LIVE` / `LIMITED` / `FALLBACK`).
 
 ## Purpose
 
