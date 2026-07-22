@@ -49,14 +49,16 @@ No installation is required.
 
 ### Configure Live News (Recommended)
 
+News is fetched directly in your browser from free, keyless sources (GDELT and Google News RSS) — no backend or server setup required.
+
 1. Click **Settings** in the top-right of the dashboard.
-2. Add a **GNews API key** (free tier).
-3. Optionally add a **NewsData.io API key** for broader coverage.
+2. (Optional) Add a **GNews API key** (free tier) for broader coverage.
+3. (Optional) Add a **NewsData.io API key** for broader coverage.
 4. Set your preferred query (example: `UAE AI OR artificial intelligence`).
 5. Choose whether to enable archive fallback when live APIs are limited.
 
 Notes:
-- API keys are stored locally in your browser (`localStorage`) and are not sent to a backend by this project.
+- API keys are stored locally in your browser (`localStorage`) and are never sent anywhere except directly to the provider you configured.
 - Free API tiers may rate-limit requests, which can temporarily show status as `LIMITED`.
 
 ### Option 2: Use the Live Version

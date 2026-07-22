@@ -1444,14 +1444,7 @@
       });
     }
 
-    async function fetchLiveSignals() {
-      const tasks = [fetchLiveSignalsFromGdelt(), fetchLiveSignalsFromRss()];
-      if (useOptionalApis()) {
-        tasks.push(fetchLiveSignalsFromGNews(), fetchLiveSignalsFromNewsData());
-      }
-      const results = await Promise.allSettled(tasks);
-      const merged = [];
-      results.forEach(r => { if (r.status === 'fulfilled') merged.push(...r.value); });
+    function finalizeLiveSignals(merged) {
       const seen = new Set();
       const cutoff = Date.now() - 45 * 86400000;      // 45-day window
       return merged.filter(a => {
@@ -1463,6 +1456,17 @@
         if (!hasEntityHit && !seemsUaeRelevant(qualityText)) return false;
         seen.add(key); return true;
       }).sort((x, y) => y.dateObj - x.dateObj).slice(0, NEWS_CONFIG.mergedCap);
+    }
+
+    async function fetchLiveSignals() {
+      const tasks = [fetchLiveSignalsFromGdelt(), fetchLiveSignalsFromRss()];
+      if (useOptionalApis()) {
+        tasks.push(fetchLiveSignalsFromGNews(), fetchLiveSignalsFromNewsData());
+      }
+      const results = await Promise.allSettled(tasks);
+      const merged = [];
+      results.forEach(r => { if (r.status === 'fulfilled') merged.push(...r.value); });
+      return finalizeLiveSignals(merged);
     }
 
     function openSettingsModal() {
@@ -1530,7 +1534,9 @@
 
     async function refreshLiveData(manual = false) {
       if (manual) showToast('Pulling live sources and rescoring...');
+
       const [entitiesResult, signalsResult] = await Promise.allSettled([fetchLiveEntities(), fetchLiveSignals()]);
+
       const includeArchive = useArchiveFallback();
 
       // Newly discovered companies join the registry BEFORE we build the alias index.
